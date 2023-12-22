@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.FileEncoding", "Nid
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.FileEncoding.Tests", "Nidikwa.FileEncoding.Tests\Nidikwa.FileEncoding.Tests.csproj", "{F3FF09D8-506B-4C57-AD30-8A23AB3DD56B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FileEncoding", "FileEncoding", "{AC59578A-C14D-4363-8D71-3B39F798C5E9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091} = {AC59578A-C14D-4363-8D71-3B39F798C5E9}
+		{F3FF09D8-506B-4C57-AD30-8A23AB3DD56B} = {AC59578A-C14D-4363-8D71-3B39F798C5E9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {726E8127-05F3-407A-AFAE-C2ED99131AAC}
