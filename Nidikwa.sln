@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.FileFormat", "Nidikwa.FileFormat\Nidikwa.FileFormat.csproj", "{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.FileFormat", "Nidikwa.FileFormat\Nidikwa.FileFormat.csproj", "{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.FileEncoding", "Nidikwa.FileEncoding\Nidikwa.FileEncoding.csproj", "{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

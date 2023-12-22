@@ -2,6 +2,6 @@
 
 public enum DeviceType
 {
-    Input = 0,
-    Output = 1,
+    Input,
+    Output,
 }
