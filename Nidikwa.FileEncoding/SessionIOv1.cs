@@ -53,7 +53,7 @@ namespace Nidikwa.FileEncoding
             {
                 var waveData = await ParseAsync(stream, devices[i].DataLength, cancellationToken).ConfigureAwait(false);
 
-                deviceSessions[i] = new DeviceSession(devices[i].Id, devices[i].Name, waveData, devices[i].Type);
+                deviceSessions[i] = new DeviceSession(devices[i].Id, devices[i].Name, devices[i].Type, waveData);
             }
 
             return new RecordSession(metadata, deviceSessions);

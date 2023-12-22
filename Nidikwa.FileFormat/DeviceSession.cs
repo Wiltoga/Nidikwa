@@ -1,3 +1,3 @@
 ﻿namespace Nidikwa.FileFormat;
 
-public record DeviceSession(string DeviceId, string DeviceName, byte[] WaveData, DeviceType Type);
+public record DeviceSession(string DeviceId, string DeviceName, DeviceType Type, byte[] WaveData);

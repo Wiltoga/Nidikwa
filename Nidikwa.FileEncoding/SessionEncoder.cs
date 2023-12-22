@@ -1,24 +1,25 @@
 ﻿using Nidikwa.FileFormat;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Nidikwa.FileEncoding;
 
-public class SessionWriter
+public class SessionEncoder
 {
     private const string fileType = "NDKW";
     private static ISessionIO[] SessionIOs;
 
-    static SessionWriter()
+    static SessionEncoder()
     {
-        SessionIOs = (from type in typeof(SessionWriter).Assembly.GetTypes()
-                      where type.IsInstanceOfType(typeof(ISessionIO))
+        SessionIOs = (from type in typeof(SessionEncoder).Assembly.GetTypes()
+                      where type.GetInterfaces().Contains(typeof(ISessionIO)) && type.GetConstructor(Array.Empty<Type>()) is not null
                       select type.GetConstructor(Array.Empty<Type>())!.Invoke(null) as ISessionIO)
             .ToArray();
     }
 
-    public async Task<RecordSessionMetadata> ParseMetadataAsync(Stream stream, CancellationToken cancellationToken = default)
+    public async Task<RecordSessionMetadata> ParseMetadataAsync(Stream stream, ushort? desiredVersion = null, CancellationToken cancellationToken = default)
     {
         var signatureBytes = new byte[4];
         await stream.ReadAsync(signatureBytes);
@@ -27,6 +28,9 @@ public class SessionWriter
         var versionBytes = new byte[2];
         await stream.ReadAsync(versionBytes);
         var version = BitConverter.ToUInt16(versionBytes);
+        if (desiredVersion is not null && version != desiredVersion)
+            throw new ArgumentException("The provided file is not suitable for this version");
+
         var validReader = SessionIOs.FirstOrDefault(reader => reader.FileVersion == version);
 
         if (validReader is null)
@@ -35,7 +39,7 @@ public class SessionWriter
         return await validReader.ReadMetadataAsync(stream, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<RecordSession> ParseSessionAsync(Stream stream, CancellationToken cancellationToken = default)
+    public async Task<RecordSession> ParseSessionAsync(Stream stream, ushort? desiredVersion = null, CancellationToken cancellationToken = default)
     {
         var signatureBytes = new byte[4];
         await stream.ReadAsync(signatureBytes);
@@ -44,6 +48,9 @@ public class SessionWriter
         var versionBytes = new byte[2];
         await stream.ReadAsync(versionBytes);
         var version = BitConverter.ToUInt16(versionBytes);
+        if (desiredVersion is not null && version != desiredVersion)
+            throw new ArgumentException("The provided file is not suitable for this version");
+
         var validReader = SessionIOs.FirstOrDefault(reader => reader.FileVersion == version);
 
         if (validReader is null)
