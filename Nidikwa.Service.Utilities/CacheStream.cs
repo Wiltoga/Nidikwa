@@ -27,6 +27,14 @@ public class CacheStream : Stream
         this.maxLength = maxLength;
     }
 
+    public void Clear()
+    {
+        InternalMemory.Seek(cacheReferenceStart, SeekOrigin.Begin);
+        virtualPosition = 0;
+        writtenBytes = 0;
+        cacheOffset = 0;
+    }
+
     public override void Flush()
     {
         InternalMemory.Flush();
