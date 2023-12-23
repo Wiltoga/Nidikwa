@@ -1,19 +1,12 @@
-﻿namespace Nidikwa.Service;
+﻿using Nidikwa.Models;
 
-internal class Controller(
-    ILogger<Controller> logger,
-    IAudioService audioService
-) : IController
+namespace Nidikwa.Service;
+
+internal partial class Controller
 {
-    public async Task<Result> ParseInputAsync(string input)
+    [Endpoint("get-devices")]
+    public Task<Result> GetAvailableDevices()
     {
-        logger.LogInformation("Recieved {input}", input);
-
-        var result = new Result
-        {
-            Code = 0,
-        };
-
-        return result;
+        return Task.FromResult(Success(Array.Empty<Device>()));
     }
 }
