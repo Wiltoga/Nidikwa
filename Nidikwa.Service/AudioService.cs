@@ -124,18 +124,6 @@ internal class AudioService : IAudioService
         });
     }
 
-    private async Task Locked(Action action)
-    {
-        try
-        {
-            await _lock.WaitAsync();
-            action();
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
     private async Task Locked(Func<Task> action)
     {
         try
