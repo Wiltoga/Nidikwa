@@ -34,10 +34,10 @@ public class SessionIOv1Should
 
         for (int i = 0; i < mockSession.DeviceSessions.Length; ++i)
         {
-            Assert.AreEqual(mockSession.DeviceSessions[i].DeviceId, result.DeviceSessions[i].DeviceId);
-            Assert.AreEqual(mockSession.DeviceSessions[i].DeviceName, result.DeviceSessions[i].DeviceName);
-            Assert.AreEqual(mockSession.DeviceSessions[i].Type, result.DeviceSessions[i].Type);
-            Assert.IsTrue(mockSession.DeviceSessions[i].WaveData.SequenceEqual(result.DeviceSessions[i].WaveData));
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].DeviceId, result.DeviceSessions.Span[i].DeviceId);
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].DeviceName, result.DeviceSessions.Span[i].DeviceName);
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].Type, result.DeviceSessions.Span[i].Type);
+            Assert.IsTrue(mockSession.DeviceSessions.Span[i].WaveData.Span.SequenceEqual(result.DeviceSessions.Span[i].WaveData.Span));
         }
     }
 
@@ -76,6 +76,6 @@ public class SessionIOv1Should
                 ),
             }
         );
-        mockEncodedData = Convert.FromBase64String("TkRLVwEArEHpp6bg/UWexYzMbOu8BOQVbG3cAAAAoCvdCQAAAAACAAAACQAAAGRldmljZUlkMQsAAABkZXZpY2UgbmFtZQAXAAAAAAAAAAkAAABkZXZpY2VJZDIRAAAAZGV2aWNlIG90aGVyIG5hbWUBEQAAAAAAAAB/LGFgWnYeIH4YH8y1bMerOH7esyAOLH4fdgd5CF9hYH9h34cIYHgO");
+        mockEncodedData = Convert.FromBase64String("TkRLVwEArEHpp6bg/UWexYzMbOu8BOQVbG3cAAAAoCvdCQAAAAACAAAACQAAAGRldmljZUlkMQsAAABkZXZpY2UgbmFtZQAXAAAACQAAAGRldmljZUlkMhEAAABkZXZpY2Ugb3RoZXIgbmFtZQERAAAAfyxhYFp2HiB+GB/MtWzHqzh+3rMgDix+H3YHeQhfYWB/Yd+HCGB4Dg==");
     }
 }

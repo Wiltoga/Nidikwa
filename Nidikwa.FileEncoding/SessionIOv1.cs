@@ -15,11 +15,11 @@ internal class SessionIOv1 : ISessionIO
 
     public async Task<RecordSessionMetadata> ReadMetadataAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var id = new Guid(await ParseAsync(stream, 16, cancellationToken).ConfigureAwait(false));
+        var id = new Guid((await ParseAsync(stream, 16, cancellationToken).ConfigureAwait(false)).Span);
 
-        var date = DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)));
+        var date = DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64((await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)).Span));
 
-        var totalDuration = TimeSpan.FromTicks(BitConverter.ToInt64(await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)));
+        var totalDuration = TimeSpan.FromTicks(BitConverter.ToInt64((await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)).Span));
 
         return new RecordSessionMetadata(id, date, totalDuration);
     }
@@ -28,23 +28,23 @@ internal class SessionIOv1 : ISessionIO
     {
         var metadata = await ReadMetadataAsync(stream, cancellationToken).ConfigureAwait(false);
 
-        var deviceSessionsCount = BitConverter.ToInt32(await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false));
+        var deviceSessionsCount = BitConverter.ToInt32(((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span));
 
-        var devices = new (string Id, string Name, DeviceType Type, long DataLength)[deviceSessionsCount];
+        var devices = new (string Id, string Name, DeviceType Type, int DataLength)[deviceSessionsCount];
 
         for (int i = 0; i < deviceSessionsCount; ++i)
         {
-            var idLength = BitConverter.ToInt32(await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false));
-            var id = Encoding.UTF8.GetString(await ParseAsync(stream, idLength, cancellationToken).ConfigureAwait(false));
+            var idLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
+            var id = Encoding.UTF8.GetString((await ParseAsync(stream, idLength, cancellationToken).ConfigureAwait(false)).Span);
 
-            var nameLength = BitConverter.ToInt32(await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false));
-            var name = Encoding.UTF8.GetString(await ParseAsync(stream, nameLength, cancellationToken).ConfigureAwait(false));
+            var nameLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
+            var name = Encoding.UTF8.GetString((await ParseAsync(stream, nameLength, cancellationToken).ConfigureAwait(false)).Span);
 
-            var type = Map((await ParseAsync(stream, 1, cancellationToken).ConfigureAwait(false))[0]);
+            var type = Map((await ParseAsync(stream, 1, cancellationToken).ConfigureAwait(false)).Span[0]);
 
-            var dataLength = BitConverter.ToInt64(await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false));
+            var dataLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
 
-            devices[i] = ((id, name, type, dataLength));
+            devices[i] = (id, name, type, dataLength);
         }
 
         var deviceSessions = new DeviceSession[deviceSessionsCount];
@@ -79,7 +79,7 @@ internal class SessionIOv1 : ISessionIO
         await stream.WriteAsync(BitConverter.GetBytes(recordSession.DeviceSessions.Length), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        foreach (var deviceSession in recordSession.DeviceSessions)
+        foreach (var deviceSession in recordSession.DeviceSessions.ToArray())
         {
             await stream.WriteAsync(BitConverter.GetBytes(deviceSession.DeviceId.Length), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
@@ -94,7 +94,7 @@ internal class SessionIOv1 : ISessionIO
             await stream.WriteAsync(new[] { Map(deviceSession.Type) }, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.WaveData.LongLength), cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.WaveData.Length), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -102,7 +102,7 @@ internal class SessionIOv1 : ISessionIO
 
         #region wave data writing
 
-        foreach (var deviceSession in recordSession.DeviceSessions)
+        foreach (var deviceSession in recordSession.DeviceSessions.ToArray())
         {
             await stream.WriteAsync(deviceSession.WaveData, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
@@ -131,7 +131,7 @@ internal class SessionIOv1 : ISessionIO
         throw new ArgumentException("Unknown device type");
     }
 
-    private static async Task<byte[]> ParseAsync(Stream stream, long bufferLength, CancellationToken cancellationToken)
+    private static async Task<ReadOnlyMemory<byte>> ParseAsync(Stream stream, int bufferLength, CancellationToken cancellationToken)
     {
         var buffer = new byte[bufferLength];
         if (await stream.ReadAsync(buffer, cancellationToken) < bufferLength)
