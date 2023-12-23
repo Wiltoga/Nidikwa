@@ -32,14 +32,13 @@ internal class PipeManagerWorker(
                     break;
                 }
                 stoppingToken.ThrowIfCancellationRequested();
-                Result result;
+                string result;
                 using (var scope = serviceScopeFactory.CreateScope())
                 {
                     var controller = scope.ServiceProvider.GetRequiredService<IController>();
-                    result = await controller.ParseInputAsync(Encoding.UTF8.GetString(data));
+                    result = await controller.HandleRequestAsync(Encoding.UTF8.GetString(data));
                 }
-                var resultString = JsonConvert.SerializeObject(result);
-                var resultBytes = Encoding.UTF8.GetBytes(resultString);
+                var resultBytes = Encoding.UTF8.GetBytes(result);
 
                 await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
                 stoppingToken.ThrowIfCancellationRequested();

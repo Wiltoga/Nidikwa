@@ -1,12 +1,24 @@
-﻿using System.Reflection;
+﻿using Newtonsoft.Json;
+using System.Reflection;
 
 namespace Nidikwa.Service;
 
-internal sealed partial class Controller(
-    ILogger<Controller> logger,
-    IAudioService audioService
-) : IController
+internal sealed partial class Controller : IController
 {
+    private readonly ILogger<Controller> logger;
+    private readonly IAudioService audioService;
+    private readonly JsonSerializerSettings serializerSettings;
+
+    public Controller(
+        ILogger<Controller> logger,
+        IAudioService audioService,
+        JsonSerializerSettings serializerSettings
+    )
+    {
+        this.logger = logger;
+        this.audioService = audioService;
+        this.serializerSettings = serializerSettings;
+    }
     private static Dictionary<string, (string Name, Func<Controller, string, Task<Result>> Call)> Endpoints { get; }
 
     static Controller()
@@ -22,17 +34,16 @@ internal sealed partial class Controller(
             var parameters = method.GetParameters();
             if (parameters.Length > 1)
                 continue;
-            if (parameters.Length == 1 && parameters[0].ParameterType != typeof(string))
-                continue;
-            var hasParameters = parameters.Length > 0;
+            var parameter = parameters.FirstOrDefault();
 
             if (method.ReturnType != typeof(Task<Result>))
                 continue;
-            if (hasParameters)
+            if (parameter is not null)
             {
                 Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string arg) =>
                 {
-                    return (Task<Result>)method.Invoke(controller, new[] { arg })!;
+                    var deserialized = JsonConvert.DeserializeObject(arg, parameter.ParameterType, controller.serializerSettings);
+                    return (Task<Result>)method.Invoke(controller, [deserialized])!;
                 }));
             }
             else
@@ -45,7 +56,7 @@ internal sealed partial class Controller(
         }
     }
 
-    public async Task<Result> ParseInputAsync(string input)
+    public async Task<string> HandleRequestAsync(string input)
     {
         string enpointName;
         string data;
@@ -57,19 +68,22 @@ internal sealed partial class Controller(
         catch (IndexOutOfRangeException)
         {
             logger.LogError("Invalid input structure '{input}'", input);
-            return InvalidInputStructure($"Invalid input structure '{input}'");
+            return JsonConvert.SerializeObject(InvalidInputStructure($"Invalid input structure '{input}'"), serializerSettings);
         }
 
         if (Endpoints.TryGetValue(enpointName, out var endpoint))
         {
-            logger.LogInformation("Calling '{callback}()'", endpoint.Name);
+            logger.LogInformation("Calling {callback}()", endpoint.Name);
             logger.LogInformation("Data : '{data}'", data);
-            return await endpoint.Call(this, data);
+            var result = await endpoint.Call.Invoke(this, data);
+            var response = JsonConvert.SerializeObject(result, serializerSettings);
+            logger.LogInformation("Response : '{response}'", response);
+            return response;
         }
         else
         {
             logger.LogError("Invalid endpoint '{enpointName}'", enpointName);
-            return InvalidEndpoint($"Invalid endpoint '{enpointName}'");
+            return JsonConvert.SerializeObject(InvalidEndpoint($"Invalid endpoint '{enpointName}'"), serializerSettings);
         }
     }
 }

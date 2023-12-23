@@ -1,3 +1,6 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using Nidikwa.Service;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -5,6 +8,13 @@ builder.Services
     .AddHostedService<PipeManagerWorker>()
     .AddSingleton<IAudioService, AudioService>()
     .AddScoped<IController, Controller>()
+    .AddSingleton(new JsonSerializerSettings
+    {
+        Converters = new JsonConverter[]
+        {
+            new StringEnumConverter(new CamelCaseNamingStrategy())
+        }
+    })
 ;
 
 var host = builder.Build();

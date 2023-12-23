@@ -2,5 +2,5 @@
 
 internal interface IController
 {
-    Task<Result> ParseInputAsync(string input);
+    Task<string> HandleRequestAsync(string input);
 }
