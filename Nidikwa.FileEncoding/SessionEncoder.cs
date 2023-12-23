@@ -22,7 +22,7 @@ public class SessionEncoder
         await stream.ReadAsync(signatureBytes);
         if (Encoding.ASCII.GetString(signatureBytes) != fileType)
             throw new FormatException($"The provided file is not a valid {fileType} file");
-        var versionBytes = new byte[2];
+        var versionBytes = new byte[sizeof(ushort)];
         await stream.ReadAsync(versionBytes);
         var version = BitConverter.ToUInt16(versionBytes);
         if (desiredVersion is not null && version != desiredVersion)
@@ -42,7 +42,7 @@ public class SessionEncoder
         await stream.ReadAsync(signatureBytes);
         if (Encoding.ASCII.GetString(signatureBytes) != fileType)
             throw new FormatException($"The provided file is not a valid {fileType} file");
-        var versionBytes = new byte[2];
+        var versionBytes = new byte[sizeof(ushort)];
         await stream.ReadAsync(versionBytes);
         var version = BitConverter.ToUInt16(versionBytes);
         if (desiredVersion is not null && version != desiredVersion)

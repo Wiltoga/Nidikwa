@@ -17,9 +17,9 @@ internal class SessionIOv1 : ISessionIO
     {
         var id = new Guid((await ParseAsync(stream, 16, cancellationToken).ConfigureAwait(false)).Span);
 
-        var date = DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64((await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)).Span));
+        var date = DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64((await ParseAsync(stream, sizeof(long), cancellationToken).ConfigureAwait(false)).Span));
 
-        var totalDuration = TimeSpan.FromTicks(BitConverter.ToInt64((await ParseAsync(stream, 8, cancellationToken).ConfigureAwait(false)).Span));
+        var totalDuration = TimeSpan.FromTicks(BitConverter.ToInt64((await ParseAsync(stream, sizeof(long), cancellationToken).ConfigureAwait(false)).Span));
 
         return new RecordSessionMetadata(id, date, totalDuration);
     }
@@ -28,21 +28,21 @@ internal class SessionIOv1 : ISessionIO
     {
         var metadata = await ReadMetadataAsync(stream, cancellationToken).ConfigureAwait(false);
 
-        var deviceSessionsCount = BitConverter.ToInt32(((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span));
+        var deviceSessionsCount = BitConverter.ToInt32(((await ParseAsync(stream, sizeof(int), cancellationToken).ConfigureAwait(false)).Span));
 
         var devices = new (string Id, string Name, DeviceType Type, int DataLength)[deviceSessionsCount];
 
         for (int i = 0; i < deviceSessionsCount; ++i)
         {
-            var idLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
+            var idLength = BitConverter.ToInt32((await ParseAsync(stream, sizeof(int), cancellationToken).ConfigureAwait(false)).Span);
             var id = Encoding.UTF8.GetString((await ParseAsync(stream, idLength, cancellationToken).ConfigureAwait(false)).Span);
 
-            var nameLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
+            var nameLength = BitConverter.ToInt32((await ParseAsync(stream, sizeof(int), cancellationToken).ConfigureAwait(false)).Span);
             var name = Encoding.UTF8.GetString((await ParseAsync(stream, nameLength, cancellationToken).ConfigureAwait(false)).Span);
 
-            var type = Map((await ParseAsync(stream, 1, cancellationToken).ConfigureAwait(false)).Span[0]);
+            var type = Map((await ParseAsync(stream, sizeof(byte), cancellationToken).ConfigureAwait(false)).Span[0]);
 
-            var dataLength = BitConverter.ToInt32((await ParseAsync(stream, 4, cancellationToken).ConfigureAwait(false)).Span);
+            var dataLength = BitConverter.ToInt32((await ParseAsync(stream, sizeof(int), cancellationToken).ConfigureAwait(false)).Span);
 
             devices[i] = (id, name, type, dataLength);
         }
