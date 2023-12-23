@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Reflection;
+using Nidikwa.Service.Utilities;
 
 namespace Nidikwa.Service;
 
@@ -75,7 +76,16 @@ internal sealed partial class Controller : IController
         {
             logger.LogInformation("Calling {callback}()", endpoint.Name);
             logger.LogInformation("Data : '{data}'", data);
-            var result = await endpoint.Call.Invoke(this, data);
+            Result result;
+            try
+            {
+                result = await endpoint.Call.Invoke(this, data);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogError(ex, "{message}", ex.Message);
+                return JsonConvert.SerializeObject(NotFound(ex.Message), serializerSettings);
+            }
             var response = JsonConvert.SerializeObject(result, serializerSettings);
             logger.LogInformation("Response : '{response}'", response);
             return response;
