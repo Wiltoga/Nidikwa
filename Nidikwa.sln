@@ -11,7 +11,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.FileEncoding.Tests"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FileEncoding", "FileEncoding", "{AC59578A-C14D-4363-8D71-3B39F798C5E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.Service", "Nidikwa.Service\Nidikwa.Service.csproj", "{1BD10E6C-ED5A-41B4-A155-10F1E48420BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.Service", "Nidikwa.Service\Nidikwa.Service.csproj", "{1BD10E6C-ED5A-41B4-A155-10F1E48420BD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Service", "Service", "{3A449300-4FD5-4C29-B2D0-DA9BFFA81FF9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.Service.Utilities", "Nidikwa.Service.Utilities\Nidikwa.Service.Utilities.csproj", "{E15B7EEA-7CC5-49B5-9295-957DD250F19E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.Service.Utilities.Tests", "Nidikwa.Service.Utilities.Tests\Nidikwa.Service.Utilities.Tests.csproj", "{E2210743-7ABA-44BD-868E-8B8CDF314301}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{D4F4F42B-FCE7-418C-BA12-17E4DAF8E794}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +43,14 @@ Global
 		{1BD10E6C-ED5A-41B4-A155-10F1E48420BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BD10E6C-ED5A-41B4-A155-10F1E48420BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BD10E6C-ED5A-41B4-A155-10F1E48420BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E15B7EEA-7CC5-49B5-9295-957DD250F19E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E15B7EEA-7CC5-49B5-9295-957DD250F19E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E15B7EEA-7CC5-49B5-9295-957DD250F19E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E15B7EEA-7CC5-49B5-9295-957DD250F19E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -42,6 +58,10 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091} = {AC59578A-C14D-4363-8D71-3B39F798C5E9}
 		{F3FF09D8-506B-4C57-AD30-8A23AB3DD56B} = {AC59578A-C14D-4363-8D71-3B39F798C5E9}
+		{1BD10E6C-ED5A-41B4-A155-10F1E48420BD} = {3A449300-4FD5-4C29-B2D0-DA9BFFA81FF9}
+		{E15B7EEA-7CC5-49B5-9295-957DD250F19E} = {D4F4F42B-FCE7-418C-BA12-17E4DAF8E794}
+		{E2210743-7ABA-44BD-868E-8B8CDF314301} = {D4F4F42B-FCE7-418C-BA12-17E4DAF8E794}
+		{D4F4F42B-FCE7-418C-BA12-17E4DAF8E794} = {3A449300-4FD5-4C29-B2D0-DA9BFFA81FF9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {726E8127-05F3-407A-AFAE-C2ED99131AAC}

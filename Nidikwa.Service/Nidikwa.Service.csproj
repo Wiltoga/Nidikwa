@@ -11,4 +11,10 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nidikwa.FileEncoding\Nidikwa.FileEncoding.csproj" />
+    <ProjectReference Include="..\Nidikwa.FileFormat\Nidikwa.FileFormat.csproj" />
+    <ProjectReference Include="..\Nidikwa.Service.Utilities\Nidikwa.Service.Utilities.csproj" />
+  </ItemGroup>
 </Project>
