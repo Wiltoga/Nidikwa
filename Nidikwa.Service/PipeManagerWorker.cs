@@ -7,7 +7,7 @@ namespace Nidikwa.Service;
 internal class PipeManagerWorker(
     ILogger<PipeManagerWorker> logger,
     IConfiguration configuration,
-    IController controller
+    IServiceScopeFactory serviceScopeFactory
 ) : BackgroundService
 {
     private async Task HandleClient(NamedPipeServerStream serverStream, int clientNumber, CancellationToken stoppingToken)
@@ -32,8 +32,12 @@ internal class PipeManagerWorker(
                     break;
                 }
                 stoppingToken.ThrowIfCancellationRequested();
-
-                var result = await controller.ParseInputAsync(Encoding.UTF8.GetString(data));
+                Result result;
+                using (var scope = serviceScopeFactory.CreateScope())
+                {
+                    var controller = scope.ServiceProvider.GetRequiredService<IController>();
+                    result = await controller.ParseInputAsync(Encoding.UTF8.GetString(data));
+                }
                 var resultString = JsonSerializer.Serialize(result);
                 var resultBytes = Encoding.UTF8.GetBytes(resultString);
 

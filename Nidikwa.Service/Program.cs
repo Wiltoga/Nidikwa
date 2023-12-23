@@ -4,7 +4,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services
     .AddHostedService<PipeManagerWorker>()
     .AddSingleton<IAudioService, AudioService>()
-    .AddSingleton<IController, Controller>()
+    .AddScoped<IController, Controller>()
 ;
 
 var host = builder.Build();
