@@ -1,4 +1,4 @@
-﻿using Nidikwa.FileFormat;
+﻿using Nidikwa.Models;
 using System.Text;
 
 namespace Nidikwa.FileEncoding;

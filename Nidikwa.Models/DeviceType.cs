@@ -1,4 +1,4 @@
-﻿namespace Nidikwa.FileFormat;
+﻿namespace Nidikwa.Models;
 
 public enum DeviceType
 {

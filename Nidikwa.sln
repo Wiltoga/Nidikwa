@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.FileFormat", "Nidikwa.FileFormat\Nidikwa.FileFormat.csproj", "{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.FileEncoding", "Nidikwa.FileEncoding\Nidikwa.FileEncoding.csproj", "{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.FileEncoding.Tests", "Nidikwa.FileEncoding.Tests\Nidikwa.FileEncoding.Tests.csproj", "{F3FF09D8-506B-4C57-AD30-8A23AB3DD56B}"
@@ -21,16 +19,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.Service.Utilities.T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{D4F4F42B-FCE7-418C-BA12-17E4DAF8E794}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.Models", "Nidikwa.Models\Nidikwa.Models.csproj", "{1CF77962-2F40-4415-9308-6BF98CB1EB77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9DB7BD14-1F5C-4E57-837C-19186B6D8F23}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B7D35EE-171F-4FDA-B091-D1AB02C4C091}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -51,6 +47,10 @@ Global
 		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E2210743-7ABA-44BD-868E-8B8CDF314301}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CF77962-2F40-4415-9308-6BF98CB1EB77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CF77962-2F40-4415-9308-6BF98CB1EB77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CF77962-2F40-4415-9308-6BF98CB1EB77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CF77962-2F40-4415-9308-6BF98CB1EB77}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

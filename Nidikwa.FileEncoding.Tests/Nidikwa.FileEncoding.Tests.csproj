@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Nidikwa.FileEncoding\Nidikwa.FileEncoding.csproj" />
-    <ProjectReference Include="..\Nidikwa.FileFormat\Nidikwa.FileFormat.csproj" />
   </ItemGroup>
 
 </Project>

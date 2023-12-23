@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Nidikwa.FileFormat\Nidikwa.FileFormat.csproj" />
+    <ProjectReference Include="..\Nidikwa.Models\Nidikwa.Models.csproj" />
   </ItemGroup>
 
 </Project>

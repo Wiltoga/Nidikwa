@@ -1,4 +1,4 @@
-﻿using Nidikwa.FileFormat;
+﻿using Nidikwa.Models;
 using System.Text;
 
 namespace Nidikwa.FileEncoding;
@@ -53,7 +53,7 @@ internal class SessionIOv1 : ISessionIO
         {
             var waveData = await ParseAsync(stream, devices[i].DataLength, cancellationToken).ConfigureAwait(false);
 
-            deviceSessions[i] = new DeviceSession(devices[i].Id, devices[i].Name, devices[i].Type, waveData);
+            deviceSessions[i] = new DeviceSession(new Device(devices[i].Id, devices[i].Name, devices[i].Type), waveData);
         }
 
         return new RecordSession(metadata, deviceSessions);
@@ -81,17 +81,17 @@ internal class SessionIOv1 : ISessionIO
 
         foreach (var deviceSession in recordSession.DeviceSessions.ToArray())
         {
-            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.DeviceId.Length), cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.Device.Id.Length), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            await stream.WriteAsync(Encoding.UTF8.GetBytes(deviceSession.DeviceId), cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.DeviceName.Length), cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            await stream.WriteAsync(Encoding.UTF8.GetBytes(deviceSession.DeviceName), cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(Encoding.UTF8.GetBytes(deviceSession.Device.Id), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            await stream.WriteAsync(new[] { Map(deviceSession.Type) }, cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(BitConverter.GetBytes(deviceSession.Device.Name.Length), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            await stream.WriteAsync(Encoding.UTF8.GetBytes(deviceSession.Device.Name), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await stream.WriteAsync(new[] { Map(deviceSession.Device.Type) }, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             await stream.WriteAsync(BitConverter.GetBytes(deviceSession.WaveData.Length), cancellationToken).ConfigureAwait(false);

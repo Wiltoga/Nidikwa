@@ -1,4 +1,4 @@
-using Nidikwa.FileFormat;
+using Nidikwa.Models;
 
 namespace Nidikwa.FileEncoding.Tests;
 
@@ -34,9 +34,9 @@ public class SessionIOv1Should
 
         for (int i = 0; i < mockSession.DeviceSessions.Length; ++i)
         {
-            Assert.AreEqual(mockSession.DeviceSessions.Span[i].DeviceId, result.DeviceSessions.Span[i].DeviceId);
-            Assert.AreEqual(mockSession.DeviceSessions.Span[i].DeviceName, result.DeviceSessions.Span[i].DeviceName);
-            Assert.AreEqual(mockSession.DeviceSessions.Span[i].Type, result.DeviceSessions.Span[i].Type);
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].Device.Id, result.DeviceSessions.Span[i].Device.Id);
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].Device.Name, result.DeviceSessions.Span[i].Device.Name);
+            Assert.AreEqual(mockSession.DeviceSessions.Span[i].Device.Type, result.DeviceSessions.Span[i].Device.Type);
             Assert.IsTrue(mockSession.DeviceSessions.Span[i].WaveData.Span.SequenceEqual(result.DeviceSessions.Span[i].WaveData.Span));
         }
     }
@@ -63,15 +63,19 @@ public class SessionIOv1Should
             new[]
             {
                 new DeviceSession(
-                    "deviceId1",
-                    "device name",
-                    DeviceType.Input,
+                    new Device(
+                        "deviceId1",
+                        "device name",
+                        DeviceType.Input
+                    ),
                     Convert.FromBase64String("fyxhYFp2HiB+GB/MtWzHqzh+3rMgDiw=")
                 ),
                 new DeviceSession(
-                    "deviceId2",
-                    "device other name",
-                    DeviceType.Output,
+                    new Device(
+                        "deviceId2",
+                        "device other name",
+                        DeviceType.Output
+                    ),
                     Convert.FromBase64String("fh92B3kIX2Fgf2HfhwhgeA4=")
                 ),
             }
