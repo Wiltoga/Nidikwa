@@ -4,5 +4,9 @@ namespace Nidikwa.Service;
 
 internal interface IAudioService
 {
-    Task<Device[]> GetAvailableDevices();
+    Task<Device[]> GetAvailableDevicesAsync();
+
+   Task StartRecordAsync(string id);
+
+    Task<Device> GetDeviceAsync(string id);
 }
