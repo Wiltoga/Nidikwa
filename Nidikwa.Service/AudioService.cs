@@ -1,15 +1,39 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using Newtonsoft.Json;
 using Nidikwa.Models;
+using Nidikwa.Service.Utilities;
 
 namespace Nidikwa.Service;
+
+internal class DeviceRecording
+{
+    public DeviceRecording(
+        MMDevice mmDevice,
+        WasapiCapture capture,
+        CacheStream cache,
+        BufferedStream buffer
+    )
+    {
+        MmDevice = mmDevice;
+        Capture = capture;
+        Cache = cache;
+        Buffer = buffer;
+    }
+
+    public MMDevice MmDevice { get; }
+    public WasapiCapture Capture { get; }
+    public CacheStream Cache { get; }
+    public BufferedStream Buffer { get; }
+}
 
 internal class AudioService : IAudioService
 {
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1);
+    private readonly ILogger<AudioService> logger;
     private readonly IConfiguration configuration;
     private MMDeviceEnumerator MMDeviceEnumerator;
+
+    private DeviceRecording? Recording { get; set; }
 
     public AudioService(
        ILogger<AudioService> logger,
@@ -17,11 +41,13 @@ internal class AudioService : IAudioService
     )
     {
         MMDeviceEnumerator = new MMDeviceEnumerator();
+        this.logger = logger;
         this.configuration = configuration;
     }
 
     public Task<Device[]> GetAvailableDevicesAsync()
     {
+        logger.LogInformation("List audio devices");
         return Locked(() =>
         {
             return Task.FromResult(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device =>
@@ -33,32 +59,69 @@ internal class AudioService : IAudioService
 
     public Task<Device> GetDeviceAsync(string id)
     {
+        logger.LogInformation("Get single audio device");
         return Locked(() =>
         {
-            var mmeDevice = MMDeviceEnumerator
+            var mmDevice = MMDeviceEnumerator
                 .GetDevice(id);
-            if (mmeDevice is null)
+            if (mmDevice is null)
                 throw new KeyNotFoundException("Uknown device");
 
-            return Task.FromResult(new Device(mmeDevice.ID, mmeDevice.FriendlyName, mmeDevice.DataFlow == DataFlow.Capture ? DeviceType.Input : DeviceType.Output));
+            return Task.FromResult(new Device(mmDevice.ID, mmDevice.FriendlyName, mmDevice.DataFlow == DataFlow.Capture ? DeviceType.Input : DeviceType.Output));
+        });
+    }
+
+    public Task StopRecordAsync()
+    {
+        logger.LogInformation("Stop recording");
+        return Locked(async () =>
+        {
+            if (Recording is null)
+                throw new InvalidOperationException("The service is not recording");
+            var taskSource = new TaskCompletionSource();
+            Recording.Capture.RecordingStopped += (sender, e) =>
+            {
+                taskSource.SetResult();
+            };
+            Recording.Capture.StopRecording();
+
+            await taskSource.Task;
+            Recording = null;
         });
     }
 
     public Task StartRecordAsync(string id)
     {
-        var mmeDevice = MMDeviceEnumerator
-            .GetDevice(id);
-        WasapiCapture capture;
-        if (mmeDevice.DataFlow == DataFlow.Render)
+        logger.LogInformation("Start recording");
+        return Locked(() =>
         {
-            capture = new WasapiLoopbackCapture(mmeDevice);
-        }
-        else
-        {
-            capture = new WasapiCapture(mmeDevice);
-        }
+            var mmDevice = MMDeviceEnumerator
+                .GetDevice(id);
+            if (mmDevice is null)
+                throw new KeyNotFoundException("Uknown device");
 
-        return Task.CompletedTask;
+            logger.LogInformation("Start recording using {deviceName}", mmDevice.FriendlyName);
+            WasapiCapture capture;
+            if (mmDevice.DataFlow == DataFlow.Render)
+            {
+                capture = new WasapiLoopbackCapture(mmDevice);
+            }
+            else
+            {
+                capture = new WasapiCapture(mmDevice);
+            }
+
+            var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
+            var buffer = new BufferedStream(cache, 1 << 20);
+            capture.DataAvailable += (sender, e) =>
+            {
+                buffer.Write(e.Buffer, 0, e.BytesRecorded);
+            };
+            capture.StartRecording();
+            Recording = new DeviceRecording(mmDevice, capture, cache, buffer);
+
+            return Task.CompletedTask;
+        });
     }
 
     private async Task Locked(Action action)

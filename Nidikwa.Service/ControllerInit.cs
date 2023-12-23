@@ -20,7 +20,7 @@ internal sealed partial class Controller : IController
         this.audioService = audioService;
         this.serializerSettings = serializerSettings;
     }
-    private static Dictionary<string, (string Name, Func<Controller, string, Task<Result>> Call)> Endpoints { get; }
+    private static Dictionary<string, (string Name, Func<Controller, string?, Task<Result>> Call)> Endpoints { get; }
 
     static Controller()
     {
@@ -36,22 +36,41 @@ internal sealed partial class Controller : IController
             if (parameters.Length > 1)
                 continue;
             var parameter = parameters.FirstOrDefault();
-
-            if (method.ReturnType != typeof(Task<Result>))
+            if (!method.ReturnType.IsGenericType)
                 continue;
+            if (method.ReturnType.GetGenericTypeDefinition() != typeof(Task<>))
+                continue;
+            if (method.ReturnType.GenericTypeArguments[0] != typeof(Result))
+            {
+                if (method.ReturnType.GenericTypeArguments[0].IsGenericType)
+                {
+                    if (method.ReturnType.GenericTypeArguments[0].GetGenericTypeDefinition() != typeof(Result<>))
+                        continue;
+                }
+                else
+                {
+                    continue;
+                }
+            }
             if (parameter is not null)
             {
-                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string arg) =>
+                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string? arg) =>
                 {
+                    if (arg is null)
+                        throw new ArgumentNullException(nameof(arg));
                     var deserialized = JsonConvert.DeserializeObject(arg, parameter.ParameterType, controller.serializerSettings);
                     return (Task<Result>)method.Invoke(controller, [deserialized])!;
                 }));
             }
             else
             {
-                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string arg) =>
+                var ResultProperty = method.ReturnType.GetProperty(nameof(Task<object>.Result)) ?? throw new Exception("Unable to find Task.Result property");
+                Endpoints.Add(endpointAttribute.Name, (method.Name, async (Controller controller, string? arg) =>
                 {
-                    return (Task<Result>)method.Invoke(controller, null)!;
+                    var task = (Task)method.Invoke(controller, null)!;
+                    await task;
+                    dynamic taskResult = task;
+                    return (Result)ResultProperty.GetValue(taskResult);
                 }));
             }
         }
@@ -60,11 +79,15 @@ internal sealed partial class Controller : IController
     public async Task<string> HandleRequestAsync(string input)
     {
         string enpointName;
-        string data;
+        string? data = null;
         try
         {
-            enpointName = input.Split(':')[0];
-            data = input.Split(':', 2)[1];
+            var parts = input.Split(':', 2);
+            enpointName = parts[0];
+            if (parts.Length > 1)
+            {
+                data = parts[1];
+            }
         }
         catch (IndexOutOfRangeException)
         {
@@ -80,6 +103,11 @@ internal sealed partial class Controller : IController
             try
             {
                 result = await endpoint.Call.Invoke(this, data);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogError(ex, "{message}", ex.Message);
+                return JsonConvert.SerializeObject(InvalidState(ex.Message), serializerSettings);
             }
             catch (KeyNotFoundException ex)
             {

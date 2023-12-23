@@ -6,7 +6,9 @@ internal interface IAudioService
 {
     Task<Device[]> GetAvailableDevicesAsync();
 
-   Task StartRecordAsync(string id);
+    Task StartRecordAsync(string id);
 
     Task<Device> GetDeviceAsync(string id);
+
+    Task StopRecordAsync();
 }

@@ -6,6 +6,11 @@ public enum ResultCodes
     InvalidEndpoint,
     InvalidInputStructure,
     NotFound,
+    InvalidState,
+    Timeout,
+    NoResponse,
+    NotConnected,
+    Disconnected,
 }
 
 public class Result

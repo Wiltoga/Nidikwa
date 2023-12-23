@@ -4,6 +4,7 @@ public static class RouteEndpoints
 {
     public const string GetDevices = "get-devices";
     public const string StartRecording = "start-recording";
+    public const string StopRecording = "stop-recording";
     public const string FindDevice = "find-device";
     public const string WaitUntilStart = "wait-until-start";
     public const string WaitUntilStop = "wait-until-stop";

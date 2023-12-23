@@ -15,6 +15,13 @@ builder.Services
             new StringEnumConverter(new CamelCaseNamingStrategy())
         }
     })
+    .AddLogging(logBuilder =>
+    {
+        logBuilder.AddSimpleConsole(c =>
+        {
+            c.TimestampFormat = "HH:mm:ss - ";
+        });
+    })
 ;
 
 var host = builder.Build();

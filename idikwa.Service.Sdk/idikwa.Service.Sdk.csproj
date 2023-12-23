@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Nidikwa.Models\Nidikwa.Models.csproj" />
+    <ProjectReference Include="..\Nidikwa.Service.Utilities\Nidikwa.Service.Utilities.csproj" />
   </ItemGroup>
 
 </Project>
