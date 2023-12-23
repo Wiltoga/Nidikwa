@@ -1,10 +1,13 @@
 ﻿using System.IO.Pipes;
+using System.Text;
+using System.Text.Json;
 
 namespace Nidikwa.Service;
 
 internal class PipeManagerWorker(
     ILogger<PipeManagerWorker> logger,
-    IConfiguration configuration
+    IConfiguration configuration,
+    IController controller
 ) : BackgroundService
 {
     private async Task HandleClient(NamedPipeServerStream serverStream, int clientNumber, CancellationToken stoppingToken)
@@ -13,12 +16,32 @@ internal class PipeManagerWorker(
         {
             try
             {
-                var buffer = new byte[1];
-                var recieved = await serverStream.ReadAsync(buffer, stoppingToken);
+                var dataLengthBytes = new byte[4];
+                
+                var recieved = await serverStream.ReadAsync(dataLengthBytes, stoppingToken);
                 if (recieved == 0)
                 {
                     break;
                 }
+                stoppingToken.ThrowIfCancellationRequested();
+
+                var data = new byte[BitConverter.ToInt32(dataLengthBytes)];
+                recieved = await serverStream.ReadAsync(data, stoppingToken);
+                if (recieved == 0)
+                {
+                    break;
+                }
+                stoppingToken.ThrowIfCancellationRequested();
+
+                var result = await controller.ParseInputAsync(Encoding.UTF8.GetString(data));
+                var resultString = JsonSerializer.Serialize(result);
+                var resultBytes = Encoding.UTF8.GetBytes(resultString);
+
+                await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
+                stoppingToken.ThrowIfCancellationRequested();
+
+                await serverStream.WriteAsync(resultBytes, stoppingToken);
+                stoppingToken.ThrowIfCancellationRequested();
             }
             catch (OperationCanceledException)
             {
