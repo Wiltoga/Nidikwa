@@ -1,5 +1,4 @@
 ﻿using Nidikwa.FileFormat;
-using System.Threading;
 
 namespace Nidikwa.FileEncoding;
 
