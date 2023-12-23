@@ -1,6 +1,6 @@
-﻿using System.IO.Pipes;
+﻿using Newtonsoft.Json;
+using System.IO.Pipes;
 using System.Text;
-using System.Text.Json;
 
 namespace Nidikwa.Service;
 
@@ -38,7 +38,7 @@ internal class PipeManagerWorker(
                     var controller = scope.ServiceProvider.GetRequiredService<IController>();
                     result = await controller.ParseInputAsync(Encoding.UTF8.GetString(data));
                 }
-                var resultString = JsonSerializer.Serialize(result);
+                var resultString = JsonConvert.SerializeObject(result);
                 var resultBytes = Encoding.UTF8.GetBytes(resultString);
 
                 await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
