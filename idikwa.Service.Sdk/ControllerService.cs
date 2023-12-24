@@ -38,10 +38,10 @@ public class ControllerService : IControllerEndpoints
         }
     }
 
-    private async Task<Result> GetAsync(string input, string? data = null)
+    private async Task<Result> GetAsync(string input, object? data = null)
     {
         if (data is not null)
-            input += $":{data}";
+            input += $":{JsonConvert.SerializeObject(data, serializerSettings)}";
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
@@ -65,10 +65,10 @@ public class ControllerService : IControllerEndpoints
         }
     }
 
-    private async Task<Result<T>> GetAsync<T>(string input, string? data = null)
+    private async Task<Result<T>> GetAsync<T>(string input, object? data = null)
     {
         if (data is not null)
-            input += $":{data}";
+            input += $":{JsonConvert.SerializeObject(data, serializerSettings)}";
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
@@ -99,7 +99,7 @@ public class ControllerService : IControllerEndpoints
 
     public Task<Result> StartRecording(string deviceId)
     {
-        return GetAsync(RouteEndpoints.GetDevices, deviceId);
+        return GetAsync(RouteEndpoints.StartRecording, deviceId);
     }
 
     public Task<Result<Device>> FindDevice(string deviceId)
