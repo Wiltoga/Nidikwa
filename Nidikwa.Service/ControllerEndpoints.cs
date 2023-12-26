@@ -30,4 +30,10 @@ internal partial class Controller : IControllerEndpoints
         await audioService.StopRecordAsync();
         return Success();
     }
+
+    [Endpoint(RouteEndpoints.AddToQueue)]
+    public async Task<Result<RecordSessionFile>> AddToQueue()
+    {
+        return Success(await audioService.AddToQueueAsync());
+    }
 }

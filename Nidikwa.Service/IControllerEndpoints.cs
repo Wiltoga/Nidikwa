@@ -12,4 +12,6 @@ public interface IControllerEndpoints
     Task<Result> StopRecording();
 
     Task<Result<Device>> FindDevice(string deviceId);
+
+    Task<Result<RecordSessionFile>> AddToQueue();
 }

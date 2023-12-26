@@ -1,5 +1,6 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using Nidikwa.FileEncoding;
 using Nidikwa.Models;
 using Nidikwa.Service.Utilities;
 
@@ -11,19 +12,26 @@ internal class DeviceRecording
         MMDevice mmDevice,
         WasapiCapture capture,
         CacheStream cache,
-        BufferedStream buffer
+        BufferedStream buffer,
+        IWavePlayer? silence
     )
     {
         MmDevice = mmDevice;
         Capture = capture;
         Cache = cache;
         Buffer = buffer;
+        Silence = silence;
+        Paused = false;
+        Mutex = new();
     }
-
+    public object Mutex { get; }
+    public bool Paused { get; set;  }
+    public MemoryStream? PauseCache { get; set; }
     public MMDevice MmDevice { get; }
     public WasapiCapture Capture { get; }
     public CacheStream Cache { get; }
     public BufferedStream Buffer { get; }
+    public IWavePlayer? Silence { get; }
 }
 
 internal class AudioService : IAudioService
@@ -32,6 +40,7 @@ internal class AudioService : IAudioService
     private readonly ILogger<AudioService> logger;
     private readonly IConfiguration configuration;
     private MMDeviceEnumerator MMDeviceEnumerator;
+    private IWavePlayer player;
 
     private DeviceRecording? Recording { get; set; }
 
@@ -86,7 +95,65 @@ internal class AudioService : IAudioService
             Recording.Capture.StopRecording();
 
             await taskSource.Task;
+            Recording.Silence?.Stop();
+            Recording.Buffer.Flush();
+            Recording.Cache.Seek(0, SeekOrigin.Begin);
             Recording = null;
+        });
+    }
+
+    public Task<RecordSessionFile> AddToQueueAsync()
+    {
+        logger.LogInformation("Add to queue");
+        return Locked(async () =>
+        {
+            if (Recording is null)
+                throw new InvalidOperationException("The service is not recording");
+
+            using var waveBytes = new MemoryStream();
+
+            lock (Recording.Mutex)
+            {
+                Recording.Paused = true;
+            }
+            Recording.Buffer.Flush();
+            Recording.Cache.Seek(0, SeekOrigin.Begin);
+            using var waveProvider = new RawSourceWaveStream(Recording.Cache, Recording.Capture.WaveFormat);
+            await Task.Run(() => WaveFileWriter.WriteWavFileToStream(waveBytes, waveProvider));
+            Recording.Cache.Seek(0, SeekOrigin.End);
+            var duration = TimeSpan.FromSeconds(Recording.Cache.Length / (double)Recording.Capture.WaveFormat.AverageBytesPerSecond);
+            lock (Recording.Mutex)
+            {
+                Recording.Paused = false;
+            }
+
+            var resultFile = new RecordSession(
+                new RecordSessionMetadata(
+                    Guid.NewGuid(),
+                    DateTimeOffset.Now,
+                    duration
+                ),
+                new[]
+                {
+                    new DeviceSession(
+                        new Device(
+                            Recording.MmDevice.ID,
+                            Recording.MmDevice.FriendlyName,
+                            Recording.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
+                        ),
+                        waveBytes.ToArray()
+                    )
+                }
+            );
+
+            var writer = new SessionEncoder();
+            NidikwaFiles.EnsureQueueFolderExists();
+            var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Date.ToUnixTimeSeconds()}.ndkw");
+            using var fileStream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            await writer.WriteSessionAsync(resultFile, fileStream);
+
+            return new RecordSessionFile(resultFile.Metadata, file);
         });
     }
 
@@ -102,9 +169,12 @@ internal class AudioService : IAudioService
 
             logger.LogInformation("Start recording using {deviceName}", mmDevice.FriendlyName);
             WasapiCapture capture;
+            WasapiOut? silence = null;
             if (mmDevice.DataFlow == DataFlow.Render)
             {
                 capture = new WasapiLoopbackCapture(mmDevice);
+                silence = new WasapiOut(mmDevice, AudioClientShareMode.Shared, true, 200);
+                silence.Init(new SilenceProvider(mmDevice.AudioClient.MixFormat));
             }
             else
             {
@@ -113,12 +183,32 @@ internal class AudioService : IAudioService
 
             var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
             var buffer = new BufferedStream(cache, 1 << 20);
+            Recording = new DeviceRecording(mmDevice, capture, cache, buffer, silence);
             capture.DataAvailable += (sender, e) =>
             {
-                buffer.Write(e.Buffer, 0, e.BytesRecorded);
+                lock(Recording.Mutex)
+                {
+                    if (Recording.Paused)
+                    {
+                        if (Recording.PauseCache is null)
+                            Recording.PauseCache = new MemoryStream();
+
+                        Recording.PauseCache.Write(e.Buffer, 0, e.BytesRecorded);
+                    }
+                    else
+                    {
+                        if (Recording.PauseCache is not null)
+                        {
+                            Recording.PauseCache.Seek(0, SeekOrigin.Begin);
+                            Recording.PauseCache.CopyTo(buffer);
+                            Recording.PauseCache = null;
+                        }
+                        buffer.Write(e.Buffer, 0, e.BytesRecorded);
+                    }
+                }
             };
+            silence?.Play();
             capture.StartRecording();
-            Recording = new DeviceRecording(mmDevice, capture, cache, buffer);
 
             return Task.CompletedTask;
         });

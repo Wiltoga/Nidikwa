@@ -2,4 +2,4 @@
 
 namespace Nidikwa.Service.Utilities;
 
-public record RecordSessionFile(RecordSessionMetadata SessionMetadata, FileInfo File);
+public record RecordSessionFile(RecordSessionMetadata SessionMetadata, string File);

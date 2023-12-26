@@ -6,11 +6,11 @@ public static class NidikwaFiles
     private const string QueueFolderName = "Queued";
     public static string QueueFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), NidikwaFolderName, QueueFolderName);
 
-    public static void EnsureFolderExists()
+    public static void EnsureQueueFolderExists()
     {
-        if (!Directory.Exists(NidikwaFiles.QueueFolder))
+        if (!Directory.Exists(QueueFolder))
         {
-            Directory.CreateDirectory(NidikwaFiles.QueueFolder);
+            Directory.CreateDirectory(QueueFolder);
         }
     }
 }

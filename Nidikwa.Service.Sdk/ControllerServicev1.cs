@@ -98,4 +98,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync(RouteEndpoints.StopRecording, token);
     }
+
+    public Task<Result> AddToQueueAsync(CancellationToken token = default)
+    {
+        return GetAsync(RouteEndpoints.AddToQueue, token);
+    }
 }

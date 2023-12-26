@@ -13,7 +13,7 @@ public static class ControllerService
     {
         _controllerServiceConstructors = new();
         foreach(var type in from type in typeof(ControllerService).Assembly.GetTypes()
-                               where type.GetInterfaces().Contains(typeof(IControllerService)) && type.GetConstructor(Array.Empty<Type>()) is not null
+                               where type.GetInterfaces().Contains(typeof(IControllerService))
                                select type)
         {
             var version = type.GetCustomAttribute<ControllerServiceVersionAttribute>()?.Version;

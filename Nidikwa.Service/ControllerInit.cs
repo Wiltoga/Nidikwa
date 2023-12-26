@@ -30,7 +30,7 @@ internal sealed partial class Controller : IController
 
         foreach (var method in typeof(Controller).GetMethods())
         {
-            var endpointAttribute = method.GetCustomAttribute(typeof(EndpointAttribute)) as EndpointAttribute;
+            var endpointAttribute = method.GetCustomAttribute<EndpointAttribute>();
             if (endpointAttribute is null)
                 continue;
 
