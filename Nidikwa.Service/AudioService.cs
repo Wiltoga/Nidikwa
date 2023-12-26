@@ -162,7 +162,7 @@ internal class AudioService : IAudioService
             );
             var writer = new SessionEncoder();
             NidikwaFiles.EnsureQueueFolderExists();
-            var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Date.ToUnixTimeSeconds()}.ndkw");
+            var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Id}.ndkw");
             using var fileStream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None);
 
             await writer.WriteSessionAsync(resultFile, fileStream);
