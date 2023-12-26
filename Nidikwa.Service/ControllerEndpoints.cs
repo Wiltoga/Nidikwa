@@ -3,7 +3,7 @@ using Nidikwa.Service.Utilities;
 
 namespace Nidikwa.Service;
 
-internal partial class Controller : IControllerEndpoints
+internal partial class Controller
 {
     [Endpoint(RouteEndpoints.GetDevices)]
     public async Task<Result<Device[]>> GetAvailableDevices()
