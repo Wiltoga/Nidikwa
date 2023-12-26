@@ -12,9 +12,9 @@ internal partial class Controller : IControllerEndpoints
     }
 
     [Endpoint(RouteEndpoints.StartRecording)]
-    public async Task<Result> StartRecording(string deviceId)
+    public async Task<Result> StartRecording(string[] deviceIds)
     {
-        await audioService.StartRecordAsync(deviceId);
+        await audioService.StartRecordAsync(deviceIds);
         return Success();
     }
 

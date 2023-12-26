@@ -84,9 +84,9 @@ internal class ControllerServicev1 : IControllerService
         return GetAsync<Device[]>(RouteEndpoints.GetDevices, token);
     }
 
-    public Task<Result> StartRecordingAsync(string deviceId, CancellationToken token)
+    public Task<Result> StartRecordingAsync(string[] deviceIds, CancellationToken token)
     {
-        return GetAsync(RouteEndpoints.StartRecording, token, deviceId);
+        return GetAsync(RouteEndpoints.StartRecording, token, deviceIds);
     }
 
     public Task<Result<Device>> FindDeviceAsync(string deviceId, CancellationToken token)

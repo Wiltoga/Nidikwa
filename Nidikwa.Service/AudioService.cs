@@ -38,20 +38,16 @@ internal class AudioService : IAudioService
 {
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1);
     private readonly ILogger<AudioService> logger;
-    private readonly IConfiguration configuration;
     private MMDeviceEnumerator MMDeviceEnumerator;
-    private IWavePlayer player;
 
-    private DeviceRecording? Recording { get; set; }
+    private DeviceRecording[]? Recordings { get; set; }
 
     public AudioService(
-       ILogger<AudioService> logger,
-       IConfiguration configuration
+       ILogger<AudioService> logger
     )
     {
         MMDeviceEnumerator = new MMDeviceEnumerator();
         this.logger = logger;
-        this.configuration = configuration;
     }
 
     public Task<Device[]> GetAvailableDevicesAsync()
@@ -85,20 +81,27 @@ internal class AudioService : IAudioService
         logger.LogInformation("Stop recording");
         return Locked(async () =>
         {
-            if (Recording is null)
+            if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
-            var taskSource = new TaskCompletionSource();
-            Recording.Capture.RecordingStopped += (sender, e) =>
+            var tasks = Recordings.Select(async recording =>
             {
-                taskSource.SetResult();
-            };
-            Recording.Capture.StopRecording();
+                var taskSource = new TaskCompletionSource();
+                recording.Capture.RecordingStopped += (sender, e) =>
+                {
+                    taskSource.SetResult();
+                };
+                recording.Capture.StopRecording();
 
-            await taskSource.Task;
-            Recording.Silence?.Stop();
-            Recording.Buffer.Flush();
-            Recording.Cache.Seek(0, SeekOrigin.Begin);
-            Recording = null;
+                await taskSource.Task;
+
+                recording.Silence?.Stop();
+                recording.Buffer.Flush();
+                recording.Cache.Seek(0, SeekOrigin.Begin);
+            }).ToArray();
+
+            await Task.WhenAll(tasks);
+
+            Recordings = null;
         });
     }
 
@@ -107,25 +110,47 @@ internal class AudioService : IAudioService
         logger.LogInformation("Add to queue");
         return Locked(async () =>
         {
-            if (Recording is null)
+            if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
 
-            using var waveBytes = new MemoryStream();
+            var sessionsData = await Task.WhenAll(Recordings.Select(async (recording, index) =>
+            {
+                var cacheCopy = new MemoryStream();
 
-            lock (Recording.Mutex)
+                lock (recording.Mutex)
+                {
+                    recording.Paused = true;
+                }
+                recording.Buffer.Flush();
+                recording.Cache.Seek(0, SeekOrigin.Begin);
+                await recording.Cache.CopyToAsync(cacheCopy);
+                recording.Cache.Seek(0, SeekOrigin.End);
+                lock (recording.Mutex)
+                {
+                    recording.Paused = false;
+                }
+                return (cacheCopy, recording.MmDevice, recording.Capture.WaveFormat);
+            }));
+
+            var duration = TimeSpan.FromSeconds(Recordings.First().Cache.Length / (double)sessionsData.First().WaveFormat.AverageBytesPerSecond);
+
+            var deviceSessions = await Task.WhenAll(sessionsData.Select(async sessionData =>
             {
-                Recording.Paused = true;
-            }
-            Recording.Buffer.Flush();
-            Recording.Cache.Seek(0, SeekOrigin.Begin);
-            using var waveProvider = new RawSourceWaveStream(Recording.Cache, Recording.Capture.WaveFormat);
-            await Task.Run(() => WaveFileWriter.WriteWavFileToStream(waveBytes, waveProvider));
-            Recording.Cache.Seek(0, SeekOrigin.End);
-            var duration = TimeSpan.FromSeconds(Recording.Cache.Length / (double)Recording.Capture.WaveFormat.AverageBytesPerSecond);
-            lock (Recording.Mutex)
-            {
-                Recording.Paused = false;
-            }
+                using var waveBytes = new MemoryStream();
+                using var writer = new WaveFileWriter(waveBytes, sessionData.WaveFormat);
+                sessionData.cacheCopy.Seek(0, SeekOrigin.Begin);
+                await sessionData.cacheCopy.CopyToAsync(writer);
+                sessionData.cacheCopy.Dispose();
+
+                return new DeviceSession(
+                    new Device(
+                        sessionData.MmDevice.ID,
+                        sessionData.MmDevice.FriendlyName,
+                        sessionData.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
+                    ),
+                    waveBytes.ToArray()
+                );
+            }));
 
             var resultFile = new RecordSession(
                 new RecordSessionMetadata(
@@ -133,19 +158,8 @@ internal class AudioService : IAudioService
                     DateTimeOffset.Now,
                     duration
                 ),
-                new[]
-                {
-                    new DeviceSession(
-                        new Device(
-                            Recording.MmDevice.ID,
-                            Recording.MmDevice.FriendlyName,
-                            Recording.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
-                        ),
-                        waveBytes.ToArray()
-                    )
-                }
+                deviceSessions
             );
-
             var writer = new SessionEncoder();
             NidikwaFiles.EnsureQueueFolderExists();
             var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Date.ToUnixTimeSeconds()}.ndkw");
@@ -157,58 +171,67 @@ internal class AudioService : IAudioService
         });
     }
 
-    public Task StartRecordAsync(string id)
+    public Task StartRecordAsync(string[] ids)
     {
         logger.LogInformation("Start recording");
-        return Locked(() =>
+        return Locked(async () =>
         {
-            var mmDevice = MMDeviceEnumerator
-                .GetDevice(id);
-            if (mmDevice is null)
-                throw new KeyNotFoundException("Uknown device");
+            if (Recordings is not null)
+                throw new InvalidOperationException("The service is already recording");
 
-            logger.LogInformation("Start recording using {deviceName}", mmDevice.FriendlyName);
-            WasapiCapture capture;
-            WasapiOut? silence = null;
-            if (mmDevice.DataFlow == DataFlow.Render)
+            Recordings = ids.Select(id =>
             {
-                capture = new WasapiLoopbackCapture(mmDevice);
-                silence = new WasapiOut(mmDevice, AudioClientShareMode.Shared, true, 200);
-                silence.Init(new SilenceProvider(mmDevice.AudioClient.MixFormat));
-            }
-            else
-            {
-                capture = new WasapiCapture(mmDevice);
-            }
+                var mmDevice = MMDeviceEnumerator
+                    .GetDevice(id);
+                if (mmDevice is null)
+                    throw new KeyNotFoundException("Uknown device");
 
-            var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
-            var buffer = new BufferedStream(cache, 1 << 20);
-            Recording = new DeviceRecording(mmDevice, capture, cache, buffer, silence);
-            capture.DataAvailable += (sender, e) =>
-            {
-                lock(Recording.Mutex)
+                logger.LogInformation("Start recording using {deviceName}", mmDevice.FriendlyName);
+                WasapiCapture capture;
+                WasapiOut? silence = null;
+                if (mmDevice.DataFlow == DataFlow.Render)
                 {
-                    if (Recording.Paused)
-                    {
-                        if (Recording.PauseCache is null)
-                            Recording.PauseCache = new MemoryStream();
-
-                        Recording.PauseCache.Write(e.Buffer, 0, e.BytesRecorded);
-                    }
-                    else
-                    {
-                        if (Recording.PauseCache is not null)
-                        {
-                            Recording.PauseCache.Seek(0, SeekOrigin.Begin);
-                            Recording.PauseCache.CopyTo(buffer);
-                            Recording.PauseCache = null;
-                        }
-                        buffer.Write(e.Buffer, 0, e.BytesRecorded);
-                    }
+                    capture = new WasapiLoopbackCapture(mmDevice);
+                    silence = new WasapiOut(mmDevice, AudioClientShareMode.Shared, true, 200);
+                    silence.Init(new SilenceProvider(mmDevice.AudioClient.MixFormat));
                 }
-            };
-            silence?.Play();
-            capture.StartRecording();
+                else
+                {
+                    capture = new WasapiCapture(mmDevice);
+                }
+
+                var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
+                var buffer = new BufferedStream(cache, 1 << 20);
+                var deviceRecording = new DeviceRecording(mmDevice, capture, cache, buffer, silence);
+                capture.DataAvailable += (sender, e) =>
+                {
+                    lock (deviceRecording.Mutex)
+                    {
+                        if (deviceRecording.Paused)
+                        {
+                            if (deviceRecording.PauseCache is null)
+                                deviceRecording.PauseCache = new MemoryStream();
+
+                            deviceRecording.PauseCache.Write(e.Buffer, 0, e.BytesRecorded);
+                        }
+                        else
+                        {
+                            if (deviceRecording.PauseCache is not null)
+                            {
+                                deviceRecording.PauseCache.Seek(0, SeekOrigin.Begin);
+                                deviceRecording.PauseCache.CopyTo(buffer);
+                                deviceRecording.PauseCache = null;
+                            }
+                            buffer.Write(e.Buffer, 0, e.BytesRecorded);
+                        }
+                    }
+                };
+                silence?.Play();
+
+                return deviceRecording;
+            }).ToArray();
+
+            await Task.WhenAll(Recordings.Select(recording => Task.Run(() => recording.Capture.StartRecording())));
 
             return Task.CompletedTask;
         });
