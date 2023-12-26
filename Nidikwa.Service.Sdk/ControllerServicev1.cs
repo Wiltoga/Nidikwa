@@ -6,12 +6,11 @@ using Nidikwa.Service.Utilities;
 using System.IO.Pipes;
 using System.Text;
 
-namespace idikwa.Service.Sdk;
+namespace Nidikwa.Service.Sdk;
 
-public class ControllerService : IControllerEndpoints
+[ControllerServiceVersion(1)]
+internal class ControllerServicev1 : IControllerService
 {
-    private const string pipeName = "Nidikwa.Service.Pipe";
-    private readonly static TimeSpan timeout = TimeSpan.FromSeconds(5);
     private readonly static JsonSerializerSettings serializerSettings = new JsonSerializerSettings
     {
         Converters = new JsonConverter[]
@@ -20,38 +19,26 @@ public class ControllerService : IControllerEndpoints
         }
     };
     private NamedPipeClientStream pipeClientStream;
-    public ControllerService()
+
+    public ControllerServicev1(NamedPipeClientStream client)
     {
-        pipeClientStream = new NamedPipeClientStream(pipeName);
+        pipeClientStream = client;
     }
 
-    public async Task<Result> ConnectAsync()
-    {
-        try
-        {
-            await pipeClientStream.ConnectAsync((int)timeout.TotalMilliseconds);
-            return new Result { Code = ResultCodes.Success };
-        }
-        catch (TimeoutException) 
-        {
-            return new Result { Code = ResultCodes.Timeout };
-        }
-    }
-
-    private async Task<Result> GetAsync(string input, object? data = null)
+    private async Task<Result> GetAsync(string input, CancellationToken token, object? data = null)
     {
         if (data is not null)
             input += $":{JsonConvert.SerializeObject(data, serializerSettings)}";
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
-            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length));
-            await pipeClientStream.WriteAsync(bytes);
+            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length), token);
+            await pipeClientStream.WriteAsync(bytes, token);
 
             var responseLengthBytes = new byte[sizeof(int)];
-            await pipeClientStream.ReadAsync(responseLengthBytes);
+            await pipeClientStream.ReadAsync(responseLengthBytes, token);
             var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
-            await pipeClientStream.ReadAsync(responseBytes);
+            await pipeClientStream.ReadAsync(responseBytes, token);
             var result = JsonConvert.DeserializeObject<Result>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
             return result ?? new Result { Code = ResultCodes.NoResponse };
         }
@@ -65,20 +52,20 @@ public class ControllerService : IControllerEndpoints
         }
     }
 
-    private async Task<Result<T>> GetAsync<T>(string input, object? data = null)
+    private async Task<Result<T>> GetAsync<T>(string input, CancellationToken token, object? data = null)
     {
         if (data is not null)
             input += $":{JsonConvert.SerializeObject(data, serializerSettings)}";
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
-            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length));
-            await pipeClientStream.WriteAsync(bytes);
+            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length), token);
+            await pipeClientStream.WriteAsync(bytes, token);
 
             var responseLengthBytes = new byte[sizeof(int)];
-            await pipeClientStream.ReadAsync(responseLengthBytes);
+            await pipeClientStream.ReadAsync(responseLengthBytes, token);
             var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
-            await pipeClientStream.ReadAsync(responseBytes);
+            await pipeClientStream.ReadAsync(responseBytes, token);
             var result = JsonConvert.DeserializeObject<Result<T>>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
             return result ?? new Result<T> { Code = ResultCodes.NoResponse };
         }
@@ -92,23 +79,23 @@ public class ControllerService : IControllerEndpoints
         }
     }
 
-    public Task<Result<Device[]>> GetAvailableDevices()
+    public Task<Result<Device[]>> GetAvailableDevicesAsync(CancellationToken token)
     {
-        return GetAsync<Device[]>(RouteEndpoints.GetDevices);
+        return GetAsync<Device[]>(RouteEndpoints.GetDevices, token);
     }
 
-    public Task<Result> StartRecording(string deviceId)
+    public Task<Result> StartRecordingAsync(string deviceId, CancellationToken token)
     {
-        return GetAsync(RouteEndpoints.StartRecording, deviceId);
+        return GetAsync(RouteEndpoints.StartRecording, token, deviceId);
     }
 
-    public Task<Result<Device>> FindDevice(string deviceId)
+    public Task<Result<Device>> FindDeviceAsync(string deviceId, CancellationToken token)
     {
-        return GetAsync<Device>(RouteEndpoints.FindDevice, deviceId);
+        return GetAsync<Device>(RouteEndpoints.FindDevice, token, deviceId);
     }
 
-    public Task<Result> StopRecording()
+    public Task<Result> StopRecordingAsync(CancellationToken token)
     {
-        return GetAsync(RouteEndpoints.StopRecording);
+        return GetAsync(RouteEndpoints.StopRecording, token);
     }
 }
