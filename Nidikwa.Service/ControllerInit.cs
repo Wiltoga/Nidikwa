@@ -6,6 +6,8 @@ namespace Nidikwa.Service;
 
 internal sealed partial class Controller : IController
 {
+    public ushort Version => 1;
+
     private readonly ILogger<Controller> logger;
     private readonly IAudioService audioService;
     private readonly JsonSerializerSettings serializerSettings;

@@ -12,48 +12,48 @@ internal class PipeManagerWorker(
 {
     private async Task HandleClient(NamedPipeServerStream serverStream, int clientNumber, CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        using (var scope = serviceScopeFactory.CreateScope())
         {
+            var controller = scope.ServiceProvider.GetRequiredService<IController>();
+
             try
             {
-                var dataLengthBytes = new byte[4];
+                await serverStream.WriteAsync(BitConverter.GetBytes(controller.Version), stoppingToken);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var dataLengthBytes = new byte[4];
                 
-                var recieved = await serverStream.ReadAsync(dataLengthBytes, stoppingToken);
-                if (recieved == 0)
-                {
-                    break;
-                }
-                stoppingToken.ThrowIfCancellationRequested();
+                    var recieved = await serverStream.ReadAsync(dataLengthBytes, stoppingToken);
+                    if (recieved == 0)
+                    {
+                        break;
+                    }
+                    stoppingToken.ThrowIfCancellationRequested();
 
-                var data = new byte[BitConverter.ToInt32(dataLengthBytes)];
-                recieved = await serverStream.ReadAsync(data, stoppingToken);
-                if (recieved == 0)
-                {
-                    break;
-                }
-                stoppingToken.ThrowIfCancellationRequested();
-                string result;
-                using (var scope = serviceScopeFactory.CreateScope())
-                {
-                    var controller = scope.ServiceProvider.GetRequiredService<IController>();
+                    var data = new byte[BitConverter.ToInt32(dataLengthBytes)];
+                    recieved = await serverStream.ReadAsync(data, stoppingToken);
+                    if (recieved == 0)
+                    {
+                        break;
+                    }
+                    stoppingToken.ThrowIfCancellationRequested();
+                    string result;
                     result = await controller.HandleRequestAsync(Encoding.UTF8.GetString(data));
+                    var resultBytes = Encoding.UTF8.GetBytes(result);
+
+                    await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
+                    stoppingToken.ThrowIfCancellationRequested();
+
+                    await serverStream.WriteAsync(resultBytes, stoppingToken);
+                    stoppingToken.ThrowIfCancellationRequested();
                 }
-                var resultBytes = Encoding.UTF8.GetBytes(result);
-
-                await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
-                stoppingToken.ThrowIfCancellationRequested();
-
-                await serverStream.WriteAsync(resultBytes, stoppingToken);
-                stoppingToken.ThrowIfCancellationRequested();
             }
             catch (OperationCanceledException)
             {
-                break;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "{Message}", ex.Message);
-                break;
             }
         }
         serverStream.Close();
