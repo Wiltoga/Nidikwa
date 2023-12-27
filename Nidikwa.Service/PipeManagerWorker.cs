@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System.IO.Pipes;
+﻿using System.IO.Pipes;
 using System.Text;
 
 namespace Nidikwa.Service;
@@ -22,7 +21,7 @@ internal class PipeManagerWorker(
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var dataLengthBytes = new byte[4];
-                
+
                     var recieved = await serverStream.ReadAsync(dataLengthBytes, stoppingToken);
                     if (recieved == 0)
                     {

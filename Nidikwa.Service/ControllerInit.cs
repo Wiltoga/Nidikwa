@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
-using System.Reflection;
 using Nidikwa.Service.Utilities;
+using System.Reflection;
 
 namespace Nidikwa.Service;
 
@@ -22,6 +22,7 @@ internal sealed partial class Controller : IController
         this.audioService = audioService;
         this.serializerSettings = serializerSettings;
     }
+
     private static Dictionary<string, (string Name, Func<Controller, string?, Task<Result>> Call)> Endpoints { get; }
 
     static Controller()
@@ -62,7 +63,8 @@ internal sealed partial class Controller : IController
                         throw new ArgumentNullException(nameof(arg));
                     var deserialized = JsonConvert.DeserializeObject(arg, parameter.ParameterType, controller.serializerSettings);
                     return (Task<Result>)method.Invoke(controller, [deserialized])!;
-                }));
+                }
+                ));
             }
             else
             {
@@ -73,7 +75,8 @@ internal sealed partial class Controller : IController
                     await task;
                     dynamic taskResult = task;
                     return (Result)ResultProperty.GetValue(taskResult);
-                }));
+                }
+                ));
             }
         }
     }

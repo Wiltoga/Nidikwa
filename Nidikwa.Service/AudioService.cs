@@ -24,8 +24,9 @@ internal class DeviceRecording
         Paused = false;
         Mutex = new();
     }
+
     public object Mutex { get; }
-    public bool Paused { get; set;  }
+    public bool Paused { get; set; }
     public MemoryStream? PauseCache { get; set; }
     public MMDevice MmDevice { get; }
     public WasapiCapture Capture { get; }
@@ -262,6 +263,7 @@ internal class AudioService : IAudioService
             _lock.Release();
         }
     }
+
     public Task<bool> IsRecording()
     {
         return Locked(() =>

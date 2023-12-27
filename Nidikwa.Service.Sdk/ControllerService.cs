@@ -5,16 +5,16 @@ namespace Nidikwa.Service.Sdk;
 
 public static class ControllerService
 {
-    private readonly static TimeSpan timeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan timeout = TimeSpan.FromSeconds(5);
     private const string pipeName = "Nidikwa.Service.Pipe";
     private static Dictionary<ushort, Func<NamedPipeClientStream, IControllerService>> _controllerServiceConstructors;
 
     static ControllerService()
     {
         _controllerServiceConstructors = new();
-        foreach(var type in from type in typeof(ControllerService).Assembly.GetTypes()
-                               where type.GetInterfaces().Contains(typeof(IControllerService))
-                               select type)
+        foreach (var type in from type in typeof(ControllerService).Assembly.GetTypes()
+                             where type.GetInterfaces().Contains(typeof(IControllerService))
+                             select type)
         {
             var version = type.GetCustomAttribute<ControllerServiceVersionAttribute>()?.Version;
             if (version is null)

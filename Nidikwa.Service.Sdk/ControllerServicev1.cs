@@ -11,13 +11,14 @@ namespace Nidikwa.Service.Sdk;
 [ControllerServiceVersion(1)]
 internal class ControllerServicev1 : IControllerService
 {
-    private readonly static JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+    private static readonly JsonSerializerSettings serializerSettings = new JsonSerializerSettings
     {
         Converters = new JsonConverter[]
         {
             new StringEnumConverter(new CamelCaseNamingStrategy())
         }
     };
+
     private NamedPipeClientStream pipeClientStream;
 
     public ControllerServicev1(NamedPipeClientStream client)

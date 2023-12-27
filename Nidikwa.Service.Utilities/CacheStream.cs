@@ -17,6 +17,7 @@ public class CacheStream : Stream
     public override long Length => writtenBytes;
 
     public override long Position { get => virtualPosition; set => Seek(value, SeekOrigin.Begin); }
+
     public CacheStream(Stream internalMemory, long maxLength)
     {
         InternalMemory = internalMemory;
@@ -76,6 +77,7 @@ public class CacheStream : Stream
     {
         throw new NotSupportedException();
     }
+
     public override void Write(byte[] buffer, int offset, int count)
     {
         if (count > maxLength)
