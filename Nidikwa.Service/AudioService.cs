@@ -235,17 +235,6 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         });
     }
 
-    private void AmplifyVolume(Span<byte> buffer, float volume)
-    {
-        for (int i = 0;i<buffer.Length;i += sizeof(float))
-        {
-            var sampleBytes = buffer[i..(i + sizeof(float))];
-            var sample = BitConverter.ToSingle(sampleBytes);
-            sample /= volume;
-            BitConverter.GetBytes(sample).CopyTo(sampleBytes);
-        }
-    }
-
     private async Task Locked(Func<Task> action)
     {
         try
