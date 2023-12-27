@@ -14,21 +14,17 @@ public class Editor : IDisposable
     {
         public DeviceSessionEdition(Stream source, WaveFormat format) 
         {
-            Source = source;
-            Format = format;
-            Resampler = new MediaFoundationResampler(new RawSourceWaveStream(source, format), OutputFormat);
+            RawStream = new RawSourceWaveStream(source, format);
 
-            Output = Resampler;
+            Output = RawStream;
         }
 
-        public Stream Source { get; }
-        public WaveFormat Format { get; }
-        public IWaveProvider Resampler { get; }
+        public WaveStream RawStream { get; }
         public IWaveProvider Output { get; }
 
         public void Dispose()
         {
-            Source.Dispose();
+            RawStream.Dispose();
         }
     }
     private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, MMDevice playbackDevice)
@@ -36,35 +32,33 @@ public class Editor : IDisposable
         File = file;
         Session = session;
         PlaybackDevice = playbackDevice;
-        Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
 
 
         DeviceSessions = devices;
-        
 
-        var mixer = new MixingSampleProvider(DeviceSessions.Values.Select(session => session.Output.ToSampleProvider()));
-        mixer.ReadFully = false;
-        Mixer = mixer.ToWaveProvider();
+        Mixer = new MultiplexingWaveProvider(DeviceSessions.Values.Select(session => session.Output));
 
-        FinalResampler = new MediaFoundationResampler(Mixer, playbackDevice.AudioClient.MixFormat);
-        Player.Init(FinalResampler);
-
-        Player.PlaybackStopped += Player_PlaybackStopped;
+        DeviceResampler = new MediaFoundationResampler(Mixer, playbackDevice.AudioClient.MixFormat);
     }
 
     private void Player_PlaybackStopped(object? sender, StoppedEventArgs e)
     {
+        var player = sender as IWavePlayer;
+        if (player is null)
+            return;
         IsPlaying = false;
+        player.PlaybackStopped -= Player_PlaybackStopped;
+        player.Dispose();
     }
 
     public string File { get; }
     public RecordSession Session { get; }
     public bool IsPlaying { get; private set; }
     private MMDevice PlaybackDevice { get; }
-    private IWavePlayer Player { get; }
+    private IWavePlayer? Player { get; set; }
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
     private IWaveProvider Mixer { get; }
-    private IWaveProvider FinalResampler { get; }
+    private MediaFoundationResampler DeviceResampler { get; }
 
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
     {
@@ -82,11 +76,12 @@ public class Editor : IDisposable
         var devices = await Task.WhenAll(session.DeviceSessions.ToArray().Select(
             async session =>
             {
-                using var waveData = new MemoryStream(session.WaveData.ToArray());
+                using var waveData = session.WaveData.AsStream();
                 using var wavereader = new WaveFileReader(waveData);
+                using var resampler = new MediaFoundationResampler(wavereader, OutputFormat);
                 var rawData = new MemoryStream();
-                await wavereader.CopyToAsync(rawData);
-                return new KeyValuePair<string, DeviceSessionEdition>(session.Device.Id, new DeviceSessionEdition(rawData, wavereader.WaveFormat));
+                await resampler.CopyToAsync(rawData);
+                return new KeyValuePair<string, DeviceSessionEdition>(session.Device.Id, new DeviceSessionEdition(rawData, resampler.WaveFormat));
             }));
 
         return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), device);
@@ -100,11 +95,17 @@ public class Editor : IDisposable
         IsPlaying = true;
         foreach (var session in DeviceSessions.Values)
         {
-            session.Source.Seek(0, SeekOrigin.Begin);
+            session.RawStream.Seek(0, SeekOrigin.Begin);
         }
+        DeviceResampler.Reposition();
+
+
+        Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
+        Player.Init(DeviceResampler);
+
+        Player.PlaybackStopped += Player_PlaybackStopped;
 
         Player.Play();
-
     }
 
     public void Dispose()
@@ -114,6 +115,6 @@ public class Editor : IDisposable
             session.Dispose();
         }
 
-        Player.PlaybackStopped -= Player_PlaybackStopped;
+        Player?.Stop();
     }
 }
