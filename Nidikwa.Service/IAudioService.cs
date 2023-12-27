@@ -13,11 +13,7 @@ internal interface IAudioService
 
     Task<bool> IsRecordingAsync();
 
-    Task<Device[]> GetAvailableDevicesAsync();
-
     Task StartRecordAsync(string[] ids);
-
-    Task<Device> GetDeviceAsync(string id);
 
     Task StopRecordAsync();
 

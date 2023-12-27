@@ -1,5 +1,4 @@
-﻿using Nidikwa.Models;
-using Nidikwa.Service.Utilities;
+﻿using Nidikwa.Service.Utilities;
 
 namespace Nidikwa.Service.Controllerv1;
 
@@ -7,15 +6,10 @@ namespace Nidikwa.Service.Controllerv1;
 internal partial class Controller
 {
     [Endpoint(RouteEndpoints.DeleteFromQueue)]
-    public async Task<Result> DeleteQueueItem()
+    public async Task<Result> DeleteQueueItem(Guid[] ids)
     {
-        return Success(await audioService.GetAvailableDevicesAsync());
-    }
-
-    [Endpoint(RouteEndpoints.GetDevices)]
-    public async Task<Result<Device[]>> GetAvailableDevices()
-    {
-        return Success(await audioService.GetAvailableDevicesAsync());
+        await audioService.DeleteQueueItemsAsync(ids);
+        return Success();
     }
 
     [Endpoint(RouteEndpoints.StartRecording)]
@@ -23,12 +17,6 @@ internal partial class Controller
     {
         await audioService.StartRecordAsync(deviceIds);
         return Success();
-    }
-
-    [Endpoint(RouteEndpoints.FindDevice)]
-    public async Task<Result<Device>> FindDevice(string deviceId)
-    {
-        return Success(await audioService.GetDeviceAsync(deviceId));
     }
 
     [Endpoint(RouteEndpoints.StopRecording)]

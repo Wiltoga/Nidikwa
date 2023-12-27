@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using Nidikwa.Models;
 using Nidikwa.Service.Utilities;
 using System.IO.Pipes;
 using System.Text;
@@ -80,19 +79,9 @@ internal class ControllerServicev1 : IControllerService
         }
     }
 
-    public Task<Result<Device[]>> GetAvailableDevicesAsync(CancellationToken token)
-    {
-        return GetAsync<Device[]>(RouteEndpoints.GetDevices, token);
-    }
-
     public Task<Result> StartRecordingAsync(string[] deviceIds, CancellationToken token)
     {
         return GetAsync(RouteEndpoints.StartRecording, token, deviceIds);
-    }
-
-    public Task<Result<Device>> FindDeviceAsync(string deviceId, CancellationToken token)
-    {
-        return GetAsync<Device>(RouteEndpoints.FindDevice, token, deviceId);
     }
 
     public Task<Result> StopRecordingAsync(CancellationToken token)

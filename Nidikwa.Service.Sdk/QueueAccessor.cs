@@ -1,10 +1,11 @@
 ﻿using Nidikwa.FileEncoding;
+using Nidikwa.Models;
 
 namespace Nidikwa.Service.Utilities;
 
 public static class QueueAccessor
 {
-    public static async Task<RecordSessionFile[]> GetQueueAsync(CancellationToken token)
+    public static async Task<RecordSessionFile[]> GetQueueAsync(CancellationToken token = default)
     {
         NidikwaFiles.EnsureQueueFolderExists();
         var result = new List<RecordSessionFile>();
@@ -15,6 +16,7 @@ public static class QueueAccessor
             try
             {
                 var metadata = await reader.ParseMetadataAsync(fileStream, null, token);
+                token.ThrowIfCancellationRequested();
 
                 result.Add(new RecordSessionFile(metadata, file));
             }

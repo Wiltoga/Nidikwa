@@ -4,6 +4,7 @@ using NAudio.Wave;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
 using Nidikwa.Service.Utilities;
+using System.Linq;
 
 namespace Nidikwa.Service;
 
@@ -58,32 +59,6 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         deviceCache = new();
         deviceCache.AddRange(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device => device.ID));
         MMDeviceEnumerator.RegisterEndpointNotificationCallback(this);
-    }
-
-    public Task<Device[]> GetAvailableDevicesAsync()
-    {
-        logger.LogInformation("List audio devices");
-        return Locked(() =>
-        {
-            return Task.FromResult(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device =>
-            {
-                return new Device(device.ID, device.FriendlyName, device.DataFlow == DataFlow.Capture ? DeviceType.Input : DeviceType.Output);
-            }).ToArray());
-        });
-    }
-
-    public Task<Device> GetDeviceAsync(string id)
-    {
-        logger.LogInformation("Get single audio device");
-        return Locked(() =>
-        {
-            var mmDevice = MMDeviceEnumerator
-                .GetDevice(id);
-            if (mmDevice is null)
-                throw new KeyNotFoundException("Uknown device");
-
-            return Task.FromResult(new Device(mmDevice.ID, mmDevice.FriendlyName, mmDevice.DataFlow == DataFlow.Capture ? DeviceType.Input : DeviceType.Output));
-        });
     }
 
     public Task StopRecordAsync()
@@ -150,6 +125,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 using var writer = new WaveFileWriter(waveBytes, sessionData.WaveFormat);
                 sessionData.cacheCopy.Seek(0, SeekOrigin.Begin);
                 await sessionData.cacheCopy.CopyToAsync(writer);
+                await writer.FlushAsync();
                 sessionData.cacheCopy.Dispose();
 
                 return new DeviceSession(
@@ -211,6 +187,9 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 {
                     capture = new WasapiCapture(mmDevice);
                 }
+
+                if (capture.WaveFormat.Channels > 2)
+                    capture.WaveFormat = new WaveFormat(capture.WaveFormat.SampleRate, capture.WaveFormat.BitsPerSample, 2);
 
                 var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
                 var buffer = new BufferedStream(cache, 1 << 20);
