@@ -10,5 +10,6 @@ namespace Nidikwa.Service.Sdk
         Task<Result> StartRecordingAsync(string[] deviceIds, CancellationToken token = default);
         Task<Result> StopRecordingAsync(CancellationToken token = default);
         Task<Result> AddToQueueAsync(CancellationToken token = default);
+        Task<Result<RecordStatus>> GetStatusAsync(CancellationToken token = default);
     }
 }

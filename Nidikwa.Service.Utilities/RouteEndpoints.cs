@@ -9,6 +9,7 @@ public static class RouteEndpoints
     public const string WaitUntilStart = "wait-until-start";
     public const string WaitUntilStop = "wait-until-stop";
     public const string AddToQueue = "add-to-queue";
+    public const string GetStatus = "get-status";
     public const string DeleteFromQueue = "delete-from-queue";
     public const string EventStatusChanged = "event-status-changed";
     public const string EventQueueChanged = "event-queue-changed";

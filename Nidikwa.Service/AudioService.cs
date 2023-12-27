@@ -262,4 +262,11 @@ internal class AudioService : IAudioService
             _lock.Release();
         }
     }
+    public Task<bool> IsRecording()
+    {
+        return Locked(() =>
+        {
+            return Task.FromResult(Recordings is not null);
+        });
+    }
 }
