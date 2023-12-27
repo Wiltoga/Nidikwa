@@ -89,7 +89,7 @@ public class Editor : IDisposable
 
     public void Play()
     {
-        if (IsPlaying)
+        if (Player is null || Player.PlaybackState == PlaybackState.Playing)
             return;
 
         IsPlaying = true;
@@ -106,6 +106,22 @@ public class Editor : IDisposable
         Player.PlaybackStopped += Player_PlaybackStopped;
 
         Player.Play();
+    }
+
+    public void Pause()
+    {
+        if (Player is null || Player.PlaybackState != PlaybackState.Playing)
+            return;
+
+        Player?.Pause();
+    }
+
+    public void Stop()
+    {
+        if (Player is null || Player.PlaybackState == PlaybackState.Stopped)
+            return;
+
+        Player?.Stop();
     }
 
     public void Dispose()
