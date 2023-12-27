@@ -79,9 +79,9 @@ internal class ControllerServicev1 : IControllerService
         }
     }
 
-    public Task<Result> StartRecordingAsync(string[] deviceIds, CancellationToken token)
+    public Task<Result> StartRecordingAsync(RecordParams args, CancellationToken token)
     {
-        return GetAsync(RouteEndpoints.StartRecording, token, deviceIds);
+        return GetAsync(RouteEndpoints.StartRecording, token, args);
     }
 
     public Task<Result> StopRecordingAsync(CancellationToken token)

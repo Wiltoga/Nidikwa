@@ -79,6 +79,8 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
                 await taskSource.Task.ConfigureAwait(false);
 
+                recording.Capture.Dispose();
+
                 recording.Silence?.Stop();
                 recording.Buffer.Flush();
                 recording.Cache.Seek(0, SeekOrigin.Begin);
@@ -159,7 +161,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         });
     }
 
-    public Task StartRecordAsync(string[] ids)
+    public Task StartRecordAsync(RecordParams args)
     {
         logger.LogInformation("Start recording");
         return Locked(async () =>
@@ -167,7 +169,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
             if (Recordings is not null)
                 throw new InvalidOperationException("The service is already recording");
 
-            Recordings = ids.Select(id =>
+            Recordings = args.DeviceIds.Select(id =>
             {
                 var mmDevice = MMDeviceEnumerator
                     .GetDevice(id);
@@ -188,37 +190,42 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                     capture = new WasapiCapture(mmDevice);
                 }
 
+                capture.WaveFormat = new WaveFormat(capture.WaveFormat.SampleRate, 32, capture.WaveFormat.Channels);
                 if (capture.WaveFormat.Channels > 2)
                     capture.WaveFormat = new WaveFormat(capture.WaveFormat.SampleRate, capture.WaveFormat.BitsPerSample, 2);
 
-                var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * 5);
-                var buffer = new BufferedStream(cache, 1 << 20);
+                var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * (long)args.CacheDuration.TotalSeconds);
+                var buffer = new BufferedStream(cache, 1 << 23);
                 var deviceRecording = new DeviceRecording(mmDevice, capture, cache, buffer, silence);
+                void writeBuffer(ReadOnlySpan<byte> recordedBuffer)
+                {
+                    if (deviceRecording.Paused)
+                    {
+                        if (deviceRecording.PauseCache is null)
+                            deviceRecording.PauseCache = new MemoryStream();
+
+                        deviceRecording.PauseCache.Write(recordedBuffer);
+                    }
+                    else
+                    {
+                        if (deviceRecording.PauseCache is not null)
+                        {
+                            deviceRecording.PauseCache.Seek(0, SeekOrigin.Begin);
+                            deviceRecording.PauseCache.CopyTo(buffer);
+                            deviceRecording.PauseCache = null;
+                        }
+                        buffer.Write(recordedBuffer);
+                    }
+                }
                 capture.DataAvailable += (sender, e) =>
                 {
                     lock (deviceRecording.Mutex)
                     {
-                        if (deviceRecording.Paused)
-                        {
-                            if (deviceRecording.PauseCache is null)
-                                deviceRecording.PauseCache = new MemoryStream();
-
-                            deviceRecording.PauseCache.Write(e.Buffer, 0, e.BytesRecorded);
-                        }
-                        else
-                        {
-                            if (deviceRecording.PauseCache is not null)
-                            {
-                                deviceRecording.PauseCache.Seek(0, SeekOrigin.Begin);
-                                deviceRecording.PauseCache.CopyTo(buffer);
-                                deviceRecording.PauseCache = null;
-                            }
-                            buffer.Write(e.Buffer, 0, e.BytesRecorded);
-                        }
+                        writeBuffer(e.Buffer[..e.BytesRecorded]);
                     }
                 };
                 silence?.Play();
-
+                
                 return deviceRecording;
             }).ToArray();
 
@@ -226,6 +233,17 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
             return Task.CompletedTask;
         });
+    }
+
+    private void AmplifyVolume(Span<byte> buffer, float volume)
+    {
+        for (int i = 0;i<buffer.Length;i += sizeof(float))
+        {
+            var sampleBytes = buffer[i..(i + sizeof(float))];
+            var sample = BitConverter.ToSingle(sampleBytes);
+            sample /= volume;
+            BitConverter.GetBytes(sample).CopyTo(sampleBytes);
+        }
     }
 
     private async Task Locked(Func<Task> action)

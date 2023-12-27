@@ -6,7 +6,7 @@ namespace Nidikwa.Service.Sdk
     {
         Task<Result> DeleteQueueItemAsync(Guid[] itemIds, CancellationToken token = default);
 
-        Task<Result> StartRecordingAsync(string[] deviceIds, CancellationToken token = default);
+        Task<Result> StartRecordingAsync(RecordParams args, CancellationToken token = default);
 
         Task<Result> StopRecordingAsync(CancellationToken token = default);
 
