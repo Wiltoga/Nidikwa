@@ -4,16 +4,15 @@ using System.Reflection;
 
 namespace Nidikwa.Service;
 
-internal sealed partial class Controller : IController
+[ControllerVersion(1)]
+internal sealed partial class Controllerv1 : IController
 {
-    public ushort Version => 1;
-
-    private readonly ILogger<Controller> logger;
+    private readonly ILogger<Controllerv1> logger;
     private readonly IAudioService audioService;
     private readonly JsonSerializerSettings serializerSettings;
 
-    public Controller(
-        ILogger<Controller> logger,
+    public Controllerv1(
+        ILogger<Controllerv1> logger,
         IAudioService audioService,
         JsonSerializerSettings serializerSettings
     )
@@ -23,13 +22,13 @@ internal sealed partial class Controller : IController
         this.serializerSettings = serializerSettings;
     }
 
-    private static Dictionary<string, (string Name, Func<Controller, string?, Task<Result>> Call)> Endpoints { get; }
+    private static Dictionary<string, (string Name, Func<Controllerv1, string?, Task<Result>> Call)> Endpoints { get; }
 
-    static Controller()
+    static Controllerv1()
     {
         Endpoints = new(StringComparer.FromComparison(StringComparison.InvariantCultureIgnoreCase));
 
-        foreach (var method in typeof(Controller).GetMethods())
+        foreach (var method in typeof(Controllerv1).GetMethods())
         {
             var endpointAttribute = method.GetCustomAttribute<EndpointAttribute>();
             if (endpointAttribute is null)
@@ -57,7 +56,7 @@ internal sealed partial class Controller : IController
             }
             if (parameter is not null)
             {
-                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string? arg) =>
+                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controllerv1 controller, string? arg) =>
                 {
                     if (arg is null)
                         throw new ArgumentNullException(nameof(arg));
@@ -69,10 +68,10 @@ internal sealed partial class Controller : IController
             else
             {
                 var ResultProperty = method.ReturnType.GetProperty(nameof(Task<object>.Result)) ?? throw new Exception("Unable to find Task.Result property");
-                Endpoints.Add(endpointAttribute.Name, (method.Name, async (Controller controller, string? arg) =>
+                Endpoints.Add(endpointAttribute.Name, (method.Name, async (Controllerv1 controller, string? arg) =>
                 {
                     var task = (Task)method.Invoke(controller, null)!;
-                    await task;
+                    await task.ConfigureAwait(false);
                     dynamic taskResult = task;
                     return (Result)ResultProperty.GetValue(taskResult);
                 }
@@ -107,7 +106,7 @@ internal sealed partial class Controller : IController
             Result result;
             try
             {
-                result = await endpoint.Call.Invoke(this, data);
+                result = await endpoint.Call.Invoke(this, data).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex)
             {

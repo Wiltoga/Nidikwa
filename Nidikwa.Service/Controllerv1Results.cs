@@ -2,7 +2,7 @@
 
 namespace Nidikwa.Service;
 
-internal partial class Controller
+internal partial class Controllerv1
 {
     private static Result Success() => new Result { Code = ResultCodes.Success };
 

@@ -13,11 +13,27 @@ internal class PipeManagerWorker(
     {
         using (var scope = serviceScopeFactory.CreateScope())
         {
-            var controller = scope.ServiceProvider.GetRequiredService<IController>();
 
             try
             {
-                await serverStream.WriteAsync(BitConverter.GetBytes(controller.Version), stoppingToken);
+                var handledCountBytes = new byte[sizeof(int)];
+                await serverStream.ReadAsync(handledCountBytes, stoppingToken);
+                var handledCount = BitConverter.ToInt32(handledCountBytes);
+                var handledVersions = new List<ushort>();
+                for (int i = 0;i<handledCount;++i)
+                {
+                    var versionBytes = new byte[sizeof(ushort)];
+                    await serverStream.ReadAsync(versionBytes, stoppingToken);
+                    handledVersions.Add(BitConverter.ToUInt16(versionBytes));
+                }
+                logger.LogInformation("Client versions : {versions}", string.Join(", ", handledVersions.Select(version => version.ToString())));
+                logger.LogInformation("Server versions : {versions}", string.Join(", ", ControllerVersions.Versions.Select(version => version.ToString())));
+                var compatibleVersions = handledVersions.Intersect(ControllerVersions.Versions);
+                logger.LogInformation("Compatible versions : {versions}", string.Join(", ", compatibleVersions.Select(version => version.ToString())));
+                var usedVersion = compatibleVersions.Max();
+                var controller = scope.ServiceProvider.GetRequiredKeyedService<IController>(usedVersion);
+                await serverStream.WriteAsync(BitConverter.GetBytes(usedVersion), stoppingToken);
+                logger.LogInformation("Using controller version {version}", usedVersion);
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var dataLengthBytes = new byte[4];

@@ -33,6 +33,11 @@ public static class ControllerService
     {
         var pipeClientStream = new NamedPipeClientStream(pipeName);
         await pipeClientStream.ConnectAsync((int)timeout.TotalMilliseconds, token);
+        await pipeClientStream.WriteAsync(BitConverter.GetBytes(_controllerServiceConstructors.Count), token);
+        foreach (var service in _controllerServiceConstructors)
+        {
+            await pipeClientStream.WriteAsync(BitConverter.GetBytes(service.Key), token);
+        }
         var versionBytes = new byte[sizeof(ushort)];
         await pipeClientStream.ReadAsync(versionBytes, token);
         var version = BitConverter.ToUInt16(versionBytes, 0);
