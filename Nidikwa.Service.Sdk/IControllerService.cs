@@ -20,5 +20,7 @@ namespace Nidikwa.Service.Sdk
         Task<Result<RecordStatus>> GetStatusAsync(CancellationToken token = default);
 
         Task<Result> WaitQueueChangedAsync(CancellationToken token = default);
+
+        Task<Result> WaitStatusChangedAsync(CancellationToken token = default);
     }
 }

@@ -53,7 +53,28 @@ internal partial class Controller
     [Endpoint(RouteEndpoints.EventQueueChanged)]
     public async Task<Result> EventQueueChanged()
     {
-        await audioService.WaitForQueueChangeAsync();
+        var taskSource = new TaskCompletionSource();
+        void callback(object? sender, EventArgs e)
+        {
+            taskSource.SetResult();
+        }
+        audioService.QueueChanged += callback;
+        await taskSource.Task;
+        audioService.QueueChanged -= callback;
+        return Success();
+    }
+
+    [Endpoint(RouteEndpoints.EventStatusChanged)]
+    public async Task<Result> EventStatusChanged()
+    {
+        var taskSource = new TaskCompletionSource();
+        void callback(object? sender, EventArgs e)
+        {
+            taskSource.SetResult();
+        }
+        audioService.StatusChanged += callback;
+        await taskSource.Task;
+        audioService.StatusChanged -= callback;
         return Success();
     }
 }

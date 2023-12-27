@@ -5,6 +5,9 @@ namespace Nidikwa.Service;
 
 internal interface IAudioService
 {
+    event EventHandler QueueChanged;
+    event EventHandler StatusChanged;
+
     Task DeleteQueueItems(Guid[] ids);
 
     Task<bool> IsRecording();
@@ -18,6 +21,4 @@ internal interface IAudioService
     Task StopRecordAsync();
 
     Task<RecordSessionFile> AddToQueueAsync();
-
-    Task WaitForQueueChangeAsync();
 }

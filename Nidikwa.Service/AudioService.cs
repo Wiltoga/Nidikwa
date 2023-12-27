@@ -42,6 +42,7 @@ internal class AudioService : IAudioService
     private MMDeviceEnumerator MMDeviceEnumerator;
 
     public event EventHandler? QueueChanged;
+    public event EventHandler? StatusChanged;
 
     private DeviceRecording[]? Recordings { get; set; }
 
@@ -303,17 +304,5 @@ internal class AudioService : IAudioService
         })).ConfigureAwait(false);
         if (deleted)
             QueueChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    public async Task WaitForQueueChangeAsync()
-    {
-        var taskSource = new TaskCompletionSource();
-        void AudioService_QueueChanged(object? sender, EventArgs e)
-        {
-            taskSource.SetResult();
-        }
-        QueueChanged += AudioService_QueueChanged;
-        await taskSource.Task;
-        QueueChanged -= AudioService_QueueChanged;
     }
 }

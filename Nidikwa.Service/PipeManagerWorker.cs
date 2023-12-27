@@ -13,7 +13,6 @@ internal class PipeManagerWorker(
     {
         using (var scope = serviceScopeFactory.CreateScope())
         {
-
             try
             {
                 var handledCountBytes = new byte[sizeof(int)];
