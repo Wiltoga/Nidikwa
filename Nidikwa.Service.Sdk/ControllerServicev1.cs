@@ -124,4 +124,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync(RouteEndpoints.EventStatusChanged, token);
     }
+
+    public Task<Result> WaitDevicesChangedAsync(CancellationToken token = default)
+    {
+        return GetAsync(RouteEndpoints.EventDevicesChanged, token);
+    }
 }

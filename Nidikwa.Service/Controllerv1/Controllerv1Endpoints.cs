@@ -47,7 +47,7 @@ internal partial class Controller
     [Endpoint(RouteEndpoints.GetStatus)]
     public async Task<Result<RecordStatus>> GetStatus()
     {
-        return Success((await audioService.IsRecording()) ? RecordStatus.Recording : RecordStatus.Stopped);
+        return Success((await audioService.IsRecordingAsync()) ? RecordStatus.Recording : RecordStatus.Stopped);
     }
 
     [Endpoint(RouteEndpoints.EventQueueChanged)]
@@ -75,6 +75,20 @@ internal partial class Controller
         audioService.StatusChanged += callback;
         await taskSource.Task;
         audioService.StatusChanged -= callback;
+        return Success();
+    }
+
+    [Endpoint(RouteEndpoints.EventDevicesChanged)]
+    public async Task<Result> EventDevicesChanged()
+    {
+        var taskSource = new TaskCompletionSource();
+        void callback(object? sender, EventArgs e)
+        {
+            taskSource.SetResult();
+        }
+        audioService.DevicesChanged += callback;
+        await taskSource.Task;
+        audioService.DevicesChanged -= callback;
         return Success();
     }
 }

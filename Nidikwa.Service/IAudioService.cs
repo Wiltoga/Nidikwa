@@ -7,10 +7,11 @@ internal interface IAudioService
 {
     event EventHandler QueueChanged;
     event EventHandler StatusChanged;
+    event EventHandler DevicesChanged;
 
-    Task DeleteQueueItems(Guid[] ids);
+    Task DeleteQueueItemsAsync(Guid[] ids);
 
-    Task<bool> IsRecording();
+    Task<bool> IsRecordingAsync();
 
     Task<Device[]> GetAvailableDevicesAsync();
 

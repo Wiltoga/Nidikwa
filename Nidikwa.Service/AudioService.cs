@@ -1,4 +1,5 @@
 ﻿using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
@@ -35,14 +36,16 @@ internal class DeviceRecording
     public IWavePlayer? Silence { get; }
 }
 
-internal class AudioService : IAudioService
+internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDisposable
 {
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1);
     private readonly ILogger<AudioService> logger;
     private MMDeviceEnumerator MMDeviceEnumerator;
+    private List<string> deviceCache;
 
     public event EventHandler? QueueChanged;
     public event EventHandler? StatusChanged;
+    public event EventHandler? DevicesChanged;
 
     private DeviceRecording[]? Recordings { get; set; }
 
@@ -52,6 +55,9 @@ internal class AudioService : IAudioService
     {
         MMDeviceEnumerator = new MMDeviceEnumerator();
         this.logger = logger;
+        deviceCache = new();
+        deviceCache.AddRange(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device => device.ID));
+        MMDeviceEnumerator.RegisterEndpointNotificationCallback(this);
     }
 
     public Task<Device[]> GetAvailableDevicesAsync()
@@ -269,7 +275,7 @@ internal class AudioService : IAudioService
         }
     }
 
-    public Task<bool> IsRecording()
+    public Task<bool> IsRecordingAsync()
     {
         return Locked(() =>
         {
@@ -277,7 +283,7 @@ internal class AudioService : IAudioService
         });
     }
 
-    public async Task DeleteQueueItems(Guid[] ids)
+    public async Task DeleteQueueItemsAsync(Guid[] ids)
     {
         var sessionEncoder = new SessionEncoder();
         var mutex = new object();
@@ -304,5 +310,54 @@ internal class AudioService : IAudioService
         })).ConfigureAwait(false);
         if (deleted)
             QueueChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void OnDeviceStateChanged(string deviceId, DeviceState newState)
+    {
+        if (deviceCache.Contains(deviceId) && newState != DeviceState.Active)
+        {
+            deviceCache.Remove(deviceId);
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }
+        else if (!deviceCache.Contains(deviceId) && newState == DeviceState.Active)
+        {
+            deviceCache.Add(deviceId);
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void OnDeviceAdded(string pwstrDeviceId)
+    {
+        var device = MMDeviceEnumerator.GetDevice(pwstrDeviceId);
+        if (device.State == DeviceState.Active)
+        {
+            deviceCache.Add(pwstrDeviceId);
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void OnDeviceRemoved(string deviceId)
+    {
+        if (deviceCache.Remove(deviceId))
+        {
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+    {
+        
+    }
+
+    public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key)
+    {
+        
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (await IsRecordingAsync())
+            await StopRecordAsync();
+        MMDeviceEnumerator.UnregisterEndpointNotificationCallback(this);
     }
 }
