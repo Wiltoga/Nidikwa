@@ -93,14 +93,14 @@ internal class AudioService : IAudioService
                 };
                 recording.Capture.StopRecording();
 
-                await taskSource.Task;
+                await taskSource.Task.ConfigureAwait(false);
 
                 recording.Silence?.Stop();
                 recording.Buffer.Flush();
                 recording.Cache.Seek(0, SeekOrigin.Begin);
             }).ToArray();
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             Recordings = null;
         });
@@ -131,7 +131,7 @@ internal class AudioService : IAudioService
                     recording.Paused = false;
                 }
                 return (cacheCopy, recording.MmDevice, recording.Capture.WaveFormat);
-            }));
+            })).ConfigureAwait(false);
 
             var duration = TimeSpan.FromSeconds(Recordings.First().Cache.Length / (double)sessionsData.First().WaveFormat.AverageBytesPerSecond);
 
@@ -151,7 +151,7 @@ internal class AudioService : IAudioService
                     ),
                     waveBytes.ToArray()
                 );
-            }));
+            })).ConfigureAwait(false);
 
             var resultFile = new RecordSession(
                 new RecordSessionMetadata(
@@ -166,7 +166,7 @@ internal class AudioService : IAudioService
             var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Id}.ndkw");
             using var fileStream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None);
 
-            await writer.WriteSessionAsync(resultFile, fileStream);
+            await writer.WriteSessionAsync(resultFile, fileStream).ConfigureAwait(false);
 
             return new RecordSessionFile(resultFile.Metadata, file);
         });
@@ -232,7 +232,7 @@ internal class AudioService : IAudioService
                 return deviceRecording;
             }).ToArray();
 
-            await Task.WhenAll(Recordings.Select(recording => Task.Run(() => recording.Capture.StartRecording())));
+            await Task.WhenAll(Recordings.Select(recording => Task.Run(() => recording.Capture.StartRecording()))).ConfigureAwait(false);
 
             return Task.CompletedTask;
         });
@@ -242,8 +242,8 @@ internal class AudioService : IAudioService
     {
         try
         {
-            await _lock.WaitAsync();
-            await action();
+            await _lock.WaitAsync().ConfigureAwait(false);
+            await action().ConfigureAwait(false);
         }
         finally
         {
@@ -255,8 +255,8 @@ internal class AudioService : IAudioService
     {
         try
         {
-            await _lock.WaitAsync();
-            return await action();
+            await _lock.WaitAsync().ConfigureAwait(false);
+            return await action().ConfigureAwait(false);
         }
         finally
         {
