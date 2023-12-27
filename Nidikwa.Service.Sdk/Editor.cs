@@ -49,6 +49,7 @@ public class Editor : IDisposable
         IsPlaying = false;
         player.PlaybackStopped -= Player_PlaybackStopped;
         player.Dispose();
+        Player = null;
     }
 
     public string File { get; }
@@ -81,6 +82,7 @@ public class Editor : IDisposable
                 using var resampler = new MediaFoundationResampler(wavereader, OutputFormat);
                 var rawData = new MemoryStream();
                 await resampler.CopyToAsync(rawData);
+                rawData.Seek(0, SeekOrigin.Begin);
                 return new KeyValuePair<string, DeviceSessionEdition>(session.Device.Id, new DeviceSessionEdition(rawData, resampler.WaveFormat));
             }));
 
@@ -89,15 +91,10 @@ public class Editor : IDisposable
 
     public void Play()
     {
-        if (Player is null || Player.PlaybackState == PlaybackState.Playing)
+        if (Player is { PlaybackState: PlaybackState.Playing or PlaybackState.Stopped })
             return;
 
         IsPlaying = true;
-        foreach (var session in DeviceSessions.Values)
-        {
-            session.RawStream.Seek(0, SeekOrigin.Begin);
-        }
-        DeviceResampler.Reposition();
 
 
         Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
@@ -122,6 +119,19 @@ public class Editor : IDisposable
             return;
 
         Player?.Stop();
+    }
+
+    public void MoveReader(TimeSpan offset)
+    {
+        if (IsPlaying)
+            return;
+
+        foreach (var session in DeviceSessions.Values)
+        {
+            var division = Math.DivRem((long)(offset.TotalSeconds * session.RawStream.WaveFormat.AverageBytesPerSecond), session.RawStream.WaveFormat.BlockAlign, out _);
+            session.RawStream.Seek(division * session.RawStream.WaveFormat.BlockAlign, SeekOrigin.Begin);
+        }
+        DeviceResampler.Reposition();
     }
 
     public void Dispose()
