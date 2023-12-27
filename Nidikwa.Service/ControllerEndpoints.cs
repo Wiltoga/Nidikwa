@@ -5,6 +5,12 @@ namespace Nidikwa.Service;
 
 internal partial class Controller
 {
+    [Endpoint(RouteEndpoints.DeleteFromQueue)]
+    public async Task<Result> DeleteQueueItem()
+    {
+        return Success(await audioService.GetAvailableDevicesAsync());
+    }
+
     [Endpoint(RouteEndpoints.GetDevices)]
     public async Task<Result<Device[]>> GetAvailableDevices()
     {

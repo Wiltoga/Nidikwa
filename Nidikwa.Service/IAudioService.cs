@@ -5,6 +5,8 @@ namespace Nidikwa.Service;
 
 internal interface IAudioService
 {
+    Task DeleteQueueItems(Guid[] ids);
+
     Task<bool> IsRecording();
 
     Task<Device[]> GetAvailableDevicesAsync();

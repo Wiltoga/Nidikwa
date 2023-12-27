@@ -271,4 +271,23 @@ internal class AudioService : IAudioService
             return Task.FromResult(Recordings is not null);
         });
     }
+
+    public async Task DeleteQueueItems(Guid[] ids)
+    {
+        var sessionEncoder = new SessionEncoder();
+        await Task.WhenAll(Directory.GetFiles(NidikwaFiles.QueueFolder).Select(async file =>
+        {
+            try
+            {
+                RecordSessionMetadata metadata;
+                using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    metadata = await sessionEncoder.ParseMetadataAsync(stream);
+                }
+                if (ids.Contains(metadata.Id))
+                    File.Delete(file);
+            }
+            catch { }
+        })).ConfigureAwait(false);
+    }
 }

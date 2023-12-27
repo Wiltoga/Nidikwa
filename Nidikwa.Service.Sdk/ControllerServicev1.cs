@@ -109,4 +109,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync<RecordStatus>(RouteEndpoints.GetStatus, token);
     }
+
+    public Task<Result> DeleteQueueItemAsync(Guid[] itemIds, CancellationToken token = default)
+    {
+        return GetAsync(RouteEndpoints.DeleteFromQueue, token, itemIds);
+    }
 }
