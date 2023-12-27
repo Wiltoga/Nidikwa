@@ -43,6 +43,8 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
     private readonly ILogger<AudioService> logger;
     private MMDeviceEnumerator MMDeviceEnumerator;
     private List<string> deviceCache;
+    private object activeRecordingMutex;
+    private bool activeRecording;
 
     public event EventHandler? QueueChanged;
     public event EventHandler? StatusChanged;
@@ -57,6 +59,8 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         MMDeviceEnumerator = new MMDeviceEnumerator();
         this.logger = logger;
         deviceCache = new();
+        activeRecording = false;
+        activeRecordingMutex = new();
         deviceCache.AddRange(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device => device.ID));
         MMDeviceEnumerator.RegisterEndpointNotificationCallback(this);
     }
@@ -68,6 +72,10 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
+            lock (activeRecordingMutex)
+            {
+                activeRecording = true;
+            }
             var tasks = Recordings.Select(async recording =>
             {
                 var taskSource = new TaskCompletionSource();
@@ -219,6 +227,11 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 }
                 capture.DataAvailable += (sender, e) =>
                 {
+                    lock(activeRecordingMutex)
+                    {
+                        if (!activeRecording)
+                            return;
+                    }
                     lock (deviceRecording.Mutex)
                     {
                         writeBuffer(e.Buffer[..e.BytesRecorded]);
@@ -231,7 +244,10 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
             await Task.WhenAll(Recordings.Select(recording => Task.Run(() => recording.Capture.StartRecording()))).ConfigureAwait(false);
 
-            return Task.CompletedTask;
+            lock (activeRecordingMutex)
+            {
+                activeRecording = true;
+            }
         });
     }
 
