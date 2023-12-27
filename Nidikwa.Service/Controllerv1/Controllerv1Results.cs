@@ -1,8 +1,8 @@
 ﻿using Nidikwa.Service.Utilities;
 
-namespace Nidikwa.Service;
+namespace Nidikwa.Service.Controllerv1;
 
-internal partial class Controllerv1
+internal partial class Controller
 {
     private static Result Success() => new Result { Code = ResultCodes.Success };
 

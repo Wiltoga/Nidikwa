@@ -1,9 +1,10 @@
 ﻿using Nidikwa.Models;
 using Nidikwa.Service.Utilities;
 
-namespace Nidikwa.Service;
+namespace Nidikwa.Service.Controllerv1;
 
-internal partial class Controllerv1
+[ControllerVersion(1)]
+internal partial class Controller
 {
     [Endpoint(RouteEndpoints.DeleteFromQueue)]
     public async Task<Result> DeleteQueueItem()

@@ -2,17 +2,16 @@
 using Nidikwa.Service.Utilities;
 using System.Reflection;
 
-namespace Nidikwa.Service;
+namespace Nidikwa.Service.Controllerv1;
 
-[ControllerVersion(1)]
-internal sealed partial class Controllerv1 : IController
+internal sealed partial class Controller : IController
 {
-    private readonly ILogger<Controllerv1> logger;
+    private readonly ILogger<Controller> logger;
     private readonly IAudioService audioService;
     private readonly JsonSerializerSettings serializerSettings;
 
-    public Controllerv1(
-        ILogger<Controllerv1> logger,
+    public Controller(
+        ILogger<Controller> logger,
         IAudioService audioService,
         JsonSerializerSettings serializerSettings
     )
@@ -22,13 +21,13 @@ internal sealed partial class Controllerv1 : IController
         this.serializerSettings = serializerSettings;
     }
 
-    private static Dictionary<string, (string Name, Func<Controllerv1, string?, Task<Result>> Call)> Endpoints { get; }
+    private static Dictionary<string, (string Name, Func<Controller, string?, Task<Result>> Call)> Endpoints { get; }
 
-    static Controllerv1()
+    static Controller()
     {
         Endpoints = new(StringComparer.FromComparison(StringComparison.InvariantCultureIgnoreCase));
 
-        foreach (var method in typeof(Controllerv1).GetMethods())
+        foreach (var method in typeof(Controller).GetMethods())
         {
             var endpointAttribute = method.GetCustomAttribute<EndpointAttribute>();
             if (endpointAttribute is null)
@@ -56,7 +55,7 @@ internal sealed partial class Controllerv1 : IController
             }
             if (parameter is not null)
             {
-                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controllerv1 controller, string? arg) =>
+                Endpoints.Add(endpointAttribute.Name, (method.Name, (Controller controller, string? arg) =>
                 {
                     if (arg is null)
                         throw new ArgumentNullException(nameof(arg));
@@ -68,7 +67,7 @@ internal sealed partial class Controllerv1 : IController
             else
             {
                 var ResultProperty = method.ReturnType.GetProperty(nameof(Task<object>.Result)) ?? throw new Exception("Unable to find Task.Result property");
-                Endpoints.Add(endpointAttribute.Name, (method.Name, async (Controllerv1 controller, string? arg) =>
+                Endpoints.Add(endpointAttribute.Name, (method.Name, async (Controller controller, string? arg) =>
                 {
                     var task = (Task)method.Invoke(controller, null)!;
                     await task.ConfigureAwait(false);
