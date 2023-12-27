@@ -18,4 +18,6 @@ internal interface IAudioService
     Task StopRecordAsync();
 
     Task<RecordSessionFile> AddToQueueAsync();
+
+    Task WaitForQueueChangeAsync();
 }

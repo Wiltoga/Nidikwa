@@ -49,4 +49,11 @@ internal partial class Controller
     {
         return Success((await audioService.IsRecording()) ? RecordStatus.Recording : RecordStatus.Stopped);
     }
+
+    [Endpoint(RouteEndpoints.EventQueueChanged)]
+    public async Task<Result> EventQueueChanged()
+    {
+        await audioService.WaitForQueueChangeAsync();
+        return Success();
+    }
 }

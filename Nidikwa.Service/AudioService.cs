@@ -41,6 +41,8 @@ internal class AudioService : IAudioService
     private readonly ILogger<AudioService> logger;
     private MMDeviceEnumerator MMDeviceEnumerator;
 
+    public event EventHandler? QueueChanged;
+
     private DeviceRecording[]? Recordings { get; set; }
 
     public AudioService(
@@ -168,6 +170,8 @@ internal class AudioService : IAudioService
 
             await writer.WriteSessionAsync(resultFile, fileStream).ConfigureAwait(false);
 
+            QueueChanged?.Invoke(this, EventArgs.Empty);
+
             return new RecordSessionFile(resultFile.Metadata, file);
         });
     }
@@ -275,6 +279,8 @@ internal class AudioService : IAudioService
     public async Task DeleteQueueItems(Guid[] ids)
     {
         var sessionEncoder = new SessionEncoder();
+        var mutex = new object();
+        var deleted = false;
         await Task.WhenAll(Directory.GetFiles(NidikwaFiles.QueueFolder).Select(async file =>
         {
             try
@@ -285,9 +291,29 @@ internal class AudioService : IAudioService
                     metadata = await sessionEncoder.ParseMetadataAsync(stream);
                 }
                 if (ids.Contains(metadata.Id))
+                {
                     File.Delete(file);
+                    lock (mutex)
+                    {
+                        deleted = true;
+                    }
+                }
             }
             catch { }
         })).ConfigureAwait(false);
+        if (deleted)
+            QueueChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task WaitForQueueChangeAsync()
+    {
+        var taskSource = new TaskCompletionSource();
+        void AudioService_QueueChanged(object? sender, EventArgs e)
+        {
+            taskSource.SetResult();
+        }
+        QueueChanged += AudioService_QueueChanged;
+        await taskSource.Task;
+        QueueChanged -= AudioService_QueueChanged;
     }
 }

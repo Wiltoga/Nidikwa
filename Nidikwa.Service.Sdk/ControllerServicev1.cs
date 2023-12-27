@@ -114,4 +114,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync(RouteEndpoints.DeleteFromQueue, token, itemIds);
     }
+
+    public Task<Result> WaitQueueChangedAsync(CancellationToken token = default)
+    {
+        return GetAsync(RouteEndpoints.EventQueueChanged, token);
+    }
 }
