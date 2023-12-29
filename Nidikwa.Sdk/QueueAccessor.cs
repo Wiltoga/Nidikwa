@@ -20,6 +20,10 @@ public static class QueueAccessor
 
                 result.Add(new RecordSessionFile(metadata, file));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch { }
         }
 
