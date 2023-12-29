@@ -6,6 +6,10 @@ using Nidikwa.Service;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services
+    .AddWindowsService(options =>
+    {
+        options.ServiceName = "Nidikwa";
+    })
     .AddHostedService<PipeManagerWorker>()
     .AddSingleton<IAudioService, AudioService>()
     .AddControllers()
