@@ -3,9 +3,9 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
-using Nidikwa.Service.Utilities;
+using Nidikwa.Common;
 
-namespace Nidikwa.Service.Sdk;
+namespace Nidikwa.Sdk;
 
 public class Editor : IDisposable
 {

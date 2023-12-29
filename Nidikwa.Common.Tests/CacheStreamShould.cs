@@ -1,4 +1,4 @@
-namespace Nidikwa.Service.Utilities.Tests;
+namespace Nidikwa.Common.Tests;
 
 [TestClass]
 public class CacheStreamShould

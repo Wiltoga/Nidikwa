@@ -1,4 +1,4 @@
-﻿namespace Nidikwa.Service.Sdk;
+﻿namespace Nidikwa.Sdk;
 
 internal class ControllerServiceVersionAttribute : Attribute
 {

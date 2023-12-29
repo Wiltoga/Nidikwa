@@ -1,6 +1,6 @@
 ﻿using NAudio.Wave;
 
-namespace Nidikwa.Service.Sdk;
+namespace Nidikwa.Sdk;
 
 internal static class SdkHelpers
 {

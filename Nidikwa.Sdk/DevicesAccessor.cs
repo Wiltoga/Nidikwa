@@ -1,7 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using Nidikwa.Models;
 
-namespace Nidikwa.Service.Sdk;
+namespace Nidikwa.Sdk;
 
 public static class DevicesAccessor
 {

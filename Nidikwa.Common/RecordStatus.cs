@@ -1,4 +1,4 @@
-﻿namespace Nidikwa.Service.Utilities;
+﻿namespace Nidikwa.Common;
 
 public enum RecordStatus
 {

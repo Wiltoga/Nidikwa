@@ -1,6 +1,6 @@
-﻿using Nidikwa.Service.Utilities;
+﻿using Nidikwa.Common;
 
-namespace Nidikwa.Service.Sdk
+namespace Nidikwa.Sdk
 {
     public interface IControllerService
     {

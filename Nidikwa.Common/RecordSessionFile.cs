@@ -1,5 +1,5 @@
 ﻿using Nidikwa.Models;
 
-namespace Nidikwa.Service.Utilities;
+namespace Nidikwa.Common;
 
 public record RecordSessionFile(RecordSessionMetadata SessionMetadata, string File);

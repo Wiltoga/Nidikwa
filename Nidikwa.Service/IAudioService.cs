@@ -1,5 +1,5 @@
 ﻿using Nidikwa.Models;
-using Nidikwa.Service.Utilities;
+using Nidikwa.Common;
 
 namespace Nidikwa.Service;
 

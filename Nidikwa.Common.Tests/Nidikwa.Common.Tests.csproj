@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Nidikwa.Service.Utilities\Nidikwa.Service.Utilities.csproj" />
+    <ProjectReference Include="..\Nidikwa.Common\Nidikwa.Common.csproj" />
   </ItemGroup>
 
 </Project>

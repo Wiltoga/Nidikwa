@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using Nidikwa.Service.Utilities;
+using Nidikwa.Common;
 using System.IO.Pipes;
 using System.Text;
 
-namespace Nidikwa.Service.Sdk;
+namespace Nidikwa.Sdk;
 
 [ControllerServiceVersion(1)]
 internal class ControllerServicev1 : IControllerService

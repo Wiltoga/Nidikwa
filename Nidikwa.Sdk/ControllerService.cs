@@ -1,7 +1,7 @@
 ﻿using System.IO.Pipes;
 using System.Reflection;
 
-namespace Nidikwa.Service.Sdk;
+namespace Nidikwa.Sdk;
 
 public static class ControllerService
 {
