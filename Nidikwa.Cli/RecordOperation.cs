@@ -17,8 +17,15 @@ internal class RecordOperation : IOperation
             return;
         }
         var duration = TimeSpan.Parse(args[0]);
-        var instance = await SdkHandler.GetInstanceAsync();
+        try
+        {
+            var instance = await SdkHandler.GetInstanceAsync();
 
-        Console.Write(JsonConvert.SerializeObject(await instance.StartRecordingAsync(new RecordParams(args.Skip(1).ToArray(), duration)), IOperation.JsonSettings));
+            Console.Write(JsonConvert.SerializeObject(await instance.StartRecordingAsync(new RecordParams(args.Skip(1).ToArray(), duration)), IOperation.JsonSettings));
+        }
+        catch (TimeoutException)
+        {
+            Console.Write(JsonConvert.SerializeObject(new Result { Code = ResultCodes.Timeout }, IOperation.JsonSettings));
+        }
     }
 }
