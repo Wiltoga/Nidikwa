@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-Nidikwa.Service-93ed8f00-75ae-4e9a-9eeb-77c76917970a</UserSecretsId>
-	  <OutputType>WinExe</OutputType>
+	  <OutputType Condition="'$(Configuration)' == 'Release'">WinExe</OutputType>
 	<PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
 	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 	<PlatformTarget>x64</PlatformTarget>
