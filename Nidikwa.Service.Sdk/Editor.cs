@@ -17,10 +17,15 @@ public class Editor : IDisposable
         {
             RawStream = new RawSourceWaveStream(source, format);
 
-            Output = RawStream;
+            var asSamples = RawStream.ToSampleProvider();
+
+            Volume = new VolumeSampleProvider(asSamples);
+
+            Output = Volume.ToWaveProvider();
         }
 
         public WaveStream RawStream { get; }
+        public VolumeSampleProvider Volume { get; }
         public IWaveProvider Output { get; }
 
         public void Dispose()
@@ -72,7 +77,10 @@ public class Editor : IDisposable
     public TimeSpan FullDuration { get; }
     public TimeSpan Start { get => Scope.Start; set => Scope.Start = value; }
     public TimeSpan End { get => Scope.End; set => Scope.End = value; }
-    public float VolumeLevel { get => Volume.Volume; set => Volume.Volume = value; }
+    public float MasterVolume { get => Volume.Volume; set => Volume.Volume = value; }
+
+    public float GetSessionVolume(string sessionId) => DeviceSessions[sessionId].Volume.Volume;
+    public float SetSessionVolume(string sessionId, float volume) => DeviceSessions[sessionId].Volume.Volume = volume;
 
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
     {
