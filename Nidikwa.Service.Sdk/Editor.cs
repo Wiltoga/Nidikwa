@@ -18,12 +18,18 @@ public class Editor : IDisposable
             RawStream = new RawSourceWaveStream(source, format);
 
             var asSamples = RawStream.ToSampleProvider();
+            RawStream.Seek(0, SeekOrigin.Begin);
+            var samples = new float[RawStream.Length / (RawStream.WaveFormat.BitsPerSample / 8)];
+            asSamples.Read(samples, 0, samples.Length);
+            Samples = samples;
+            RawStream.Seek(0, SeekOrigin.Begin);
 
             Volume = new VolumeSampleProvider(asSamples);
 
             Output = Volume.ToWaveProvider();
         }
 
+        public ReadOnlyMemory<float> Samples { get; }
         public WaveStream RawStream { get; }
         public VolumeSampleProvider Volume { get; }
         public IWaveProvider Output { get; }
@@ -158,6 +164,68 @@ public class Editor : IDisposable
         }
         DeviceResampler.Reposition();
         Scope.Reset(offset);
+    }
+
+    public async Task<Dictionary<string, float[]>> GetAverageSamplesBetweenAsync(TimeSpan start, TimeSpan end, int samplesCount, CancellationToken token)
+    {
+        var maxScopeTime = TimeSpan.FromSeconds(.1);
+        return new Dictionary<string, float[]>(await Task.WhenAll(DeviceSessions.Select(deviceSession => Task.Run(() =>
+        {
+            var startOffset = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)start.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
+            var endOffset = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)end.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
+
+            var samplesDuration = endOffset - startOffset;
+            if (samplesDuration < samplesCount)
+                samplesCount = samplesDuration;
+
+            // distance in sample count between each average sample calculation
+            var samplesDelta = (int)Math.Ceiling((float)samplesDuration / samplesCount);
+            // max possible range of samples for the average calculation
+            var maxScopeSamples = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)maxScopeTime.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
+
+            // actual amount of real samples used to compute one average sample
+            var computedScope = Math.Min(samplesDelta, maxScopeSamples);
+
+            var resultSamples = new float[samplesCount];
+
+            var lastSampleIsMin = false;
+            for (int i = 0; i < samplesCount; ++i)
+            {
+                var scope = deviceSession.Value.Samples.Span.Slice(startOffset + (i * samplesDelta), computedScope);
+                var max = 0f;
+                var min = 0f;
+                foreach (var sample in scope)
+                {
+                    if (sample > max)
+                        max = sample;
+                    if (sample < min)
+                        min = sample;
+                }
+
+                if (-min > max * 1.0001f)
+                {
+                    resultSamples[i] = min;
+                    lastSampleIsMin = true;
+                }
+                else if (-min * 1.0001f < max)
+                {
+                    resultSamples[i] = max;
+                    lastSampleIsMin = false;
+                }
+                else if (lastSampleIsMin)
+                {
+                    resultSamples[i] = max;
+                    lastSampleIsMin = false;
+                }
+                else
+                {
+                    resultSamples[i] = min;
+                    lastSampleIsMin = true;
+                }
+            }
+
+            return new KeyValuePair<string, float[]>(deviceSession.Key, resultSamples);
+        }))));
     }
 
     public void Dispose()
