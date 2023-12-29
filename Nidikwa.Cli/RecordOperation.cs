@@ -1,4 +1,5 @@
-﻿using Nidikwa.Common;
+﻿using Newtonsoft.Json;
+using Nidikwa.Common;
 
 namespace Nidikwa.Cli;
 
@@ -18,6 +19,6 @@ internal class RecordOperation : IOperation
         var duration = TimeSpan.Parse(args[0]);
         var instance = await SdkHandler.GetInstanceAsync();
 
-        await instance.StartRecordingAsync(new RecordParams(args.Skip(1).ToArray(), duration));
+        Console.Write(JsonConvert.SerializeObject(await instance.StartRecordingAsync(new RecordParams(args.Skip(1).ToArray(), duration))));
     }
 }
