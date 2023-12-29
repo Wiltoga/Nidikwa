@@ -27,6 +27,8 @@ public class Editor : IDisposable
             RawStream.Dispose();
         }
     }
+
+
     private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, MMDevice playbackDevice)
     {
         File = file;
@@ -38,7 +40,11 @@ public class Editor : IDisposable
 
         Mixer = new MultiplexingWaveProvider(DeviceSessions.Values.Select(session => session.Output));
 
-        DeviceResampler = new MediaFoundationResampler(Mixer, playbackDevice.AudioClient.MixFormat);
+        Scope = new TimeScopeWaveProvider(Mixer);
+
+        DeviceResampler = new MediaFoundationResampler(Scope, playbackDevice.AudioClient.MixFormat);
+
+        FullDuration = Scope.End = session.Metadata.TotalDuration;
     }
 
     private void Player_PlaybackStopped(object? sender, StoppedEventArgs e)
@@ -58,8 +64,10 @@ public class Editor : IDisposable
     private MMDevice PlaybackDevice { get; }
     private IWavePlayer? Player { get; set; }
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
-    private IWaveProvider Mixer { get; }
+    private MultiplexingWaveProvider Mixer { get; }
+    private TimeScopeWaveProvider Scope { get; }
     private MediaFoundationResampler DeviceResampler { get; }
+    public TimeSpan FullDuration { get; }
 
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
     {
@@ -89,6 +97,12 @@ public class Editor : IDisposable
         return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), device);
     }
 
+    public void SetScope(TimeSpan start, TimeSpan end)
+    {
+        Scope.Start = start;
+        Scope.End = end;
+    }
+
     public void Play()
     {
         if (Player is { PlaybackState: PlaybackState.Playing or PlaybackState.Stopped })
@@ -99,6 +113,7 @@ public class Editor : IDisposable
 
         Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
         Player.Init(DeviceResampler);
+        
 
         Player.PlaybackStopped += Player_PlaybackStopped;
 
@@ -119,6 +134,11 @@ public class Editor : IDisposable
             return;
 
         Player?.Stop();
+        Scope.Reset(TimeSpan.Zero);
+        foreach (var session in DeviceSessions.Values)
+        {
+            session.RawStream.Seek(0, SeekOrigin.Begin);
+        }
     }
 
     public void MoveReader(TimeSpan offset)
@@ -128,10 +148,11 @@ public class Editor : IDisposable
 
         foreach (var session in DeviceSessions.Values)
         {
-            var division = Math.DivRem((long)(offset.TotalSeconds * session.RawStream.WaveFormat.AverageBytesPerSecond), session.RawStream.WaveFormat.BlockAlign, out _);
-            session.RawStream.Seek(division * session.RawStream.WaveFormat.BlockAlign, SeekOrigin.Begin);
+            var size = session.RawStream.WaveFormat.ConvertLatencyToByteSize((int)offset.TotalMilliseconds);
+            session.RawStream.Seek(size, SeekOrigin.Begin);
         }
         DeviceResampler.Reposition();
+        Scope.Reset(offset);
     }
 
     public void Dispose()

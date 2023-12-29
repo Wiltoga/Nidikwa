@@ -74,4 +74,21 @@ internal static class SdkHelpers
             }
         });
     }
+    public static IEnumerable<(T First, T Second)> AsJoints<T>(this IEnumerable<T> source)
+    {
+        T lastValue = default!;
+        bool firstValue = true;
+        foreach (var item in source)
+        {
+            if (firstValue)
+            {
+                firstValue = true;
+            }
+            else
+            {
+                yield return (lastValue!, item);
+            }
+            lastValue = item;
+        }
+    }
 }
