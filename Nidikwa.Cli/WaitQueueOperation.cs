@@ -15,13 +15,13 @@ internal class WaitQueueOperation : IOperation
         var result = await instance.WaitQueueChangedAsync();
         if (result.Code != Common.ResultCodes.Success)
         {
-            Console.Write(JsonConvert.SerializeObject(result));
+            Console.Write(JsonConvert.SerializeObject(result, IOperation.JsonSettings));
             return;
         }
         Console.Write(JsonConvert.SerializeObject(new Result<RecordSessionMetadata[]>
         {
             Code = ResultCodes.Success,
             Data = (await QueueAccessor.GetQueueAsync()).Select(item => item.SessionMetadata).ToArray(),
-        }));
+        }, IOperation.JsonSettings));
     }
 }

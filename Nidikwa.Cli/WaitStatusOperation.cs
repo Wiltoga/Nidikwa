@@ -12,9 +12,9 @@ internal class WaitStatusOperation : IOperation
         var result = await instance.WaitStatusChangedAsync();
         if (result.Code != Common.ResultCodes.Success)
         {
-            Console.Write(JsonConvert.SerializeObject(result));
+            Console.Write(JsonConvert.SerializeObject(result, IOperation.JsonSettings));
             return;
         }
-        Console.Write(JsonConvert.SerializeObject(await instance.GetStatusAsync()));
+        Console.Write(JsonConvert.SerializeObject(await instance.GetStatusAsync(), IOperation.JsonSettings));
     }
 }

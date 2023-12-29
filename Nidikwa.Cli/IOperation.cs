@@ -1,9 +1,19 @@
-﻿using System.Reflection;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using System.Reflection;
 
 namespace Nidikwa.Cli;
 
 internal interface IOperation
 {
+    protected static JsonSerializerSettings JsonSettings { get; } = new JsonSerializerSettings
+    {
+        Converters = [
+            new StringEnumConverter(new CamelCaseNamingStrategy())
+        ]
+    };
+
     delegate IOperation OperationContructor();
     private static (OperationAttribute Metadata, OperationContructor Constructor)[]? allOperations;
     public static (OperationAttribute Metadata, OperationContructor Constructor)[] AllOperations

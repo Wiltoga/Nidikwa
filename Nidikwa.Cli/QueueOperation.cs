@@ -9,6 +9,6 @@ internal class QueueOperation : IOperation
     {
         var instance = await SdkHandler.GetInstanceAsync();
 
-        Console.Write(JsonConvert.SerializeObject(await instance.AddToQueueAsync()));
+        Console.Write(JsonConvert.SerializeObject(await instance.AddToQueueAsync(), IOperation.JsonSettings));
     }
 }

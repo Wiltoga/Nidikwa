@@ -10,8 +10,6 @@ internal class HelpOperation : IOperation
         if (args.Length == 0)
             args = IOperation.AllOperations.Select(operation => operation.Metadata.FullName).ToArray();
 
-        Console.WriteLine("Usage : Nidikwa.CLI.exe <operation name> [<operation parameters>]");
-        Console.WriteLine();
         foreach (string arg in args)
         {
             var operation = IOperation.AllOperations.FirstOrDefault(operation => operation.Metadata.FullName == arg).Metadata ?? IOperation.AllOperations.FirstOrDefault(operation => operation.Metadata.ShortName == arg).Metadata;
@@ -19,7 +17,7 @@ internal class HelpOperation : IOperation
             if (operation is null)
                 continue;
 
-            Console.WriteLine($"• {operation.FullName} ({operation.ShortName}) : {operation.HelpInfos}");
+            Console.WriteLine($"* {operation.FullName} ({operation.ShortName}) : {operation.HelpInfos}");
         }
 
         return Task.CompletedTask;

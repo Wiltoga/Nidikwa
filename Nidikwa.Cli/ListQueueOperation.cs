@@ -10,12 +10,10 @@ internal class ListQueueOperation : IOperation
 {
     public async Task ExecuteAsync(string[] args)
     {
-        var instance = await SdkHandler.GetInstanceAsync();
-
         Console.Write(JsonConvert.SerializeObject(new Result<RecordSessionMetadata[]>
         {
             Code = ResultCodes.Success,
             Data = (await QueueAccessor.GetQueueAsync()).Select(item => item.SessionMetadata).ToArray(),
-        }));
+        }, IOperation.JsonSettings));
     }
 }

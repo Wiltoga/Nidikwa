@@ -9,6 +9,6 @@ internal class StopOperation : IOperation
     {
         var instance = await SdkHandler.GetInstanceAsync();
 
-        Console.Write(JsonConvert.SerializeObject(await instance.StopRecordingAsync()));
+        Console.Write(JsonConvert.SerializeObject(await instance.StopRecordingAsync(), IOperation.JsonSettings));
     }
 }

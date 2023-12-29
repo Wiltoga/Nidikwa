@@ -10,6 +10,6 @@ internal class StatusOperation : IOperation
     {
         var instance = await SdkHandler.GetInstanceAsync();
 
-        Console.Write(JsonConvert.SerializeObject(await instance.GetStatusAsync()));
+        Console.Write(JsonConvert.SerializeObject(await instance.GetStatusAsync(), IOperation.JsonSettings));
     }
 }

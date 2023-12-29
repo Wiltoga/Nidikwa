@@ -21,6 +21,9 @@ else
     var constructor = IOperation.AllOperations.First(operation => operation.Metadata.IsDefault).Constructor;
 
     calledOperation = constructor();
+
+    Console.WriteLine("Usage : Nidikwa.CLI.exe <operation name> [<operation parameters>]");
+    Console.WriteLine();
 }
 
 await calledOperation.ExecuteAsync(args.Skip(1).ToArray());
