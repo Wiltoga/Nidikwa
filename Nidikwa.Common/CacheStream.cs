@@ -7,7 +7,7 @@ public class CacheStream : Stream
     private readonly long cacheReferenceStart;
     private long virtualPosition;
     private long cacheOffset;
-    private Stream InternalMemory { get; }
+    private Stream InternalStream { get; }
     public override bool CanRead => true;
 
     public override bool CanSeek => true;
@@ -18,10 +18,10 @@ public class CacheStream : Stream
 
     public override long Position { get => virtualPosition; set => Seek(value, SeekOrigin.Begin); }
 
-    public CacheStream(Stream internalMemory, long maxLength)
+    public CacheStream(Stream internalStream, long maxLength)
     {
-        InternalMemory = internalMemory;
-        cacheReferenceStart = internalMemory.Position;
+        InternalStream = internalStream;
+        cacheReferenceStart = internalStream.Position;
         virtualPosition = 0;
         writtenBytes = 0;
         cacheOffset = 0;
@@ -30,7 +30,7 @@ public class CacheStream : Stream
 
     public void Clear()
     {
-        InternalMemory.Seek(cacheReferenceStart, SeekOrigin.Begin);
+        InternalStream.Seek(cacheReferenceStart, SeekOrigin.Begin);
         virtualPosition = 0;
         writtenBytes = 0;
         cacheOffset = 0;
@@ -38,7 +38,7 @@ public class CacheStream : Stream
 
     public override void Flush()
     {
-        InternalMemory.Flush();
+        InternalStream.Flush();
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -49,13 +49,13 @@ public class CacheStream : Stream
 
         virtualPosition += readBytes;
 
-        var readInternalBytes = InternalMemory.Read(buffer, offset, readBytes);
+        var readInternalBytes = InternalStream.Read(buffer, offset, readBytes);
         if (readInternalBytes == readBytes)
             return readBytes;
 
-        InternalMemory.Seek(cacheReferenceStart, SeekOrigin.Begin);
+        InternalStream.Seek(cacheReferenceStart, SeekOrigin.Begin);
         offset += readInternalBytes;
-        InternalMemory.Read(buffer, offset, readBytes - readInternalBytes);
+        InternalStream.Read(buffer, offset, readBytes - readInternalBytes);
         return readBytes;
     }
 
@@ -68,7 +68,7 @@ public class CacheStream : Stream
             SeekOrigin.End => Math.Clamp(writtenBytes + offset, 0, writtenBytes),
             _ => throw new NotSupportedException(),
         };
-        InternalMemory.Seek(cacheReferenceStart + ((virtualPosition + cacheOffset) % maxLength), SeekOrigin.Begin);
+        InternalStream.Seek(cacheReferenceStart + ((virtualPosition + cacheOffset) % maxLength), SeekOrigin.Begin);
 
         return virtualPosition;
     }
@@ -88,16 +88,16 @@ public class CacheStream : Stream
 
         var scopedWrittenBytes = 0;
 
-        if (InternalMemory.Position - cacheReferenceStart + count > maxLength)
+        if (InternalStream.Position - cacheReferenceStart + count > maxLength)
         {
-            var maxWrittable = maxLength - InternalMemory.Position + cacheReferenceStart;
-            InternalMemory.Write(buffer, offset, (int)maxWrittable);
+            var maxWrittable = maxLength - InternalStream.Position + cacheReferenceStart;
+            InternalStream.Write(buffer, offset, (int)maxWrittable);
             scopedWrittenBytes += (int)maxWrittable;
             count -= (int)maxWrittable;
             offset += (int)maxWrittable;
-            InternalMemory.Seek(cacheReferenceStart, SeekOrigin.Begin);
+            InternalStream.Seek(cacheReferenceStart, SeekOrigin.Begin);
         }
-        InternalMemory.Write(buffer, offset, count);
+        InternalStream.Write(buffer, offset, count);
         scopedWrittenBytes += count;
 
         var overflow = virtualPosition + scopedWrittenBytes - maxLength;
@@ -106,5 +106,11 @@ public class CacheStream : Stream
             cacheOffset = (cacheOffset + overflow) % maxLength;
         }
         writtenBytes = Math.Min(writtenBytes + scopedWrittenBytes, maxLength);
+    }
+
+    public override void Close()
+    {
+        base.Close();
+        InternalStream.Close();
     }
 }

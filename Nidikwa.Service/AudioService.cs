@@ -14,7 +14,8 @@ internal class DeviceRecording
         WasapiCapture capture,
         CacheStream cache,
         BufferedStream buffer,
-        IWavePlayer? silence
+        IWavePlayer? silence,
+        string tempFile
     )
     {
         MmDevice = mmDevice;
@@ -22,6 +23,7 @@ internal class DeviceRecording
         Cache = cache;
         Buffer = buffer;
         Silence = silence;
+        TempFile = tempFile;
         Paused = false;
         Mutex = new();
     }
@@ -34,6 +36,7 @@ internal class DeviceRecording
     public CacheStream Cache { get; }
     public BufferedStream Buffer { get; }
     public IWavePlayer? Silence { get; }
+    public string TempFile { get; }
 }
 
 internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDisposable
@@ -89,8 +92,9 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 recording.Capture.Dispose();
 
                 recording.Silence?.Stop();
-                recording.Buffer.Flush();
-                recording.Cache.Seek(0, SeekOrigin.Begin);
+                recording.Buffer.Dispose();
+
+                File.Delete(recording.TempFile);
             }).ToArray();
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -201,9 +205,10 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 if (capture.WaveFormat.Channels > 2)
                     capture.WaveFormat = new WaveFormat(capture.WaveFormat.SampleRate, capture.WaveFormat.BitsPerSample, 2);
 
-                var cache = new CacheStream(new MemoryStream(), capture.WaveFormat.AverageBytesPerSecond * (long)args.CacheDuration.TotalSeconds);
+                var tempFilename = Path.GetTempFileName();
+                var cache = new CacheStream(new FileStream(tempFilename, FileMode.Create, FileAccess.ReadWrite, FileShare.None), capture.WaveFormat.AverageBytesPerSecond * (long)args.CacheDuration.TotalSeconds);
                 var buffer = new BufferedStream(cache, 1 << 23);
-                var deviceRecording = new DeviceRecording(mmDevice, capture, cache, buffer, silence);
+                var deviceRecording = new DeviceRecording(mmDevice, capture, cache, buffer, silence, tempFilename);
                 void writeBuffer(ReadOnlySpan<byte> recordedBuffer)
                 {
                     if (deviceRecording.Paused)

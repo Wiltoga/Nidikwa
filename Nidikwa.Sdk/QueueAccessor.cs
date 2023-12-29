@@ -1,7 +1,6 @@
 ﻿using Nidikwa.FileEncoding;
-using Nidikwa.Common;
 
-namespace Nidikwa.Utilities;
+namespace Nidikwa.Common;
 
 public static class QueueAccessor
 {
