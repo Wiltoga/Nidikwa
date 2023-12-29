@@ -10,9 +10,10 @@ namespace Nidikwa.Service.Sdk;
 public class Editor : IDisposable
 {
     private static WaveFormat OutputFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
+
     private class DeviceSessionEdition : IDisposable
     {
-        public DeviceSessionEdition(Stream source, WaveFormat format) 
+        public DeviceSessionEdition(Stream source, WaveFormat format)
         {
             RawStream = new RawSourceWaveStream(source, format);
 
@@ -28,13 +29,11 @@ public class Editor : IDisposable
         }
     }
 
-
     private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, MMDevice playbackDevice)
     {
         File = file;
         Session = session;
         PlaybackDevice = playbackDevice;
-
 
         DeviceSessions = devices;
 
@@ -110,10 +109,8 @@ public class Editor : IDisposable
 
         IsPlaying = true;
 
-
         Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
         Player.Init(DeviceResampler);
-        
 
         Player.PlaybackStopped += Player_PlaybackStopped;
 
