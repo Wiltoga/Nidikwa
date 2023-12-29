@@ -48,7 +48,7 @@ public class Editor : IDisposable
 
         DeviceSessions = devices;
 
-        Mixer = new MultiplexingWaveProvider(DeviceSessions.Values.Select(session => session.Output));
+        Mixer = new MixingWaveProvider32(DeviceSessions.Values.Select(session => session.Output));
 
         Scope = new TimeScopeWaveProvider(Mixer);
 
@@ -76,7 +76,7 @@ public class Editor : IDisposable
     private MMDevice PlaybackDevice { get; }
     private IWavePlayer? Player { get; set; }
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
-    private MultiplexingWaveProvider Mixer { get; }
+    private MixingWaveProvider32 Mixer { get; }
     private TimeScopeWaveProvider Scope { get; }
     private VolumeSampleProvider Volume { get; }
     private MediaFoundationResampler DeviceResampler { get; }
@@ -164,6 +164,62 @@ public class Editor : IDisposable
         }
         DeviceResampler.Reposition();
         Scope.Reset(offset);
+    }
+
+    public async Task ExportAsync(string file, ExportEncoding encoding)
+    {
+        if (IsPlaying)
+            return;
+        MoveReader(TimeSpan.Zero);
+
+        var waveProvider = Volume.ToWaveProvider();
+
+        await Task.Run(() =>
+        {
+            using var stream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read);
+            switch (encoding)
+            {
+                case ExportEncoding.Wav:
+                    WaveFileWriter.WriteWavFileToStream(stream, waveProvider);
+                    break;
+                case ExportEncoding.Mp3_64k:
+                    MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 64_000);
+                    break;
+                case ExportEncoding.Mp3_96k:
+                    MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 96_000);
+                    break;
+                case ExportEncoding.Mp3_128k:
+                    MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 128_000);
+                    break;
+                case ExportEncoding.Mp3_192k:
+                    MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 192_000);
+                    break;
+                case ExportEncoding.Aac_64k:
+                    MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 64_000);
+                    break;
+                case ExportEncoding.Aac_96k:
+                    MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 96_000);
+                    break;
+                case ExportEncoding.Aac_128k:
+                    MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 128_000);
+                    break;
+                case ExportEncoding.Aac_192k:
+                    MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 192_000);
+                    break;
+                case ExportEncoding.Wma_64k:
+                    MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 64_000);
+                    break;
+                case ExportEncoding.Wma_96k:
+                    MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 96_000);
+                    break;
+                case ExportEncoding.Wma_128k:
+                    MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 128_000);
+                    break;
+                case ExportEncoding.Wma_192k:
+                    MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 192_000);
+                    break;
+            }
+        });
     }
 
     public async Task<Dictionary<string, float[]>> GetAverageSamplesBetweenAsync(TimeSpan start, TimeSpan end, int samplesCount, CancellationToken token)
