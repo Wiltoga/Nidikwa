@@ -41,7 +41,9 @@ public class Editor : IDisposable
 
         Scope = new TimeScopeWaveProvider(Mixer);
 
-        DeviceResampler = new MediaFoundationResampler(Scope, playbackDevice.AudioClient.MixFormat);
+        Volume = new VolumeSampleProvider(Scope.ToSampleProvider());
+
+        DeviceResampler = new MediaFoundationResampler(Volume.ToWaveProvider(), playbackDevice.AudioClient.MixFormat);
 
         FullDuration = Scope.End = session.Metadata.TotalDuration;
     }
@@ -65,8 +67,12 @@ public class Editor : IDisposable
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
     private MultiplexingWaveProvider Mixer { get; }
     private TimeScopeWaveProvider Scope { get; }
+    private VolumeSampleProvider Volume { get; }
     private MediaFoundationResampler DeviceResampler { get; }
     public TimeSpan FullDuration { get; }
+    public TimeSpan Start { get => Scope.Start; set => Scope.Start = value; }
+    public TimeSpan End { get => Scope.End; set => Scope.End = value; }
+    public float VolumeLevel { get => Volume.Volume; set => Volume.Volume = value; }
 
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
     {
@@ -94,12 +100,6 @@ public class Editor : IDisposable
             }));
 
         return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), device);
-    }
-
-    public void SetScope(TimeSpan start, TimeSpan end)
-    {
-        Scope.Start = start;
-        Scope.End = end;
     }
 
     public void Play()
