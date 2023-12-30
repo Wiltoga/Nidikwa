@@ -98,6 +98,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
             }).ToArray();
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
+            StatusChanged?.Invoke(this, EventArgs.Empty);
 
             Recordings = null;
         });
@@ -175,6 +176,8 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
     public Task StartRecordAsync(RecordParams args)
     {
         logger.LogInformation("Start recording");
+        if (args.DeviceIds.Length == 0)
+            return Task.CompletedTask;
         return Locked(async () =>
         {
             if (Recordings is not null)
@@ -252,6 +255,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
             {
                 activeRecording = true;
             }
+            StatusChanged?.Invoke(this, EventArgs.Empty);
         });
     }
 
