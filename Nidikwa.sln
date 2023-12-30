@@ -21,7 +21,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.Common.Tests", "Nid
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.Common", "Nidikwa.Common\Nidikwa.Common.csproj", "{7B59A5AD-57DB-438C-92D6-5D86575E3610}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.Cli", "Nidikwa.Cli\Nidikwa.Cli.csproj", "{6B9FC5C8-F842-406F-B2AE-9B0CA2834AC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nidikwa.Cli", "Nidikwa.Cli\Nidikwa.Cli.csproj", "{6B9FC5C8-F842-406F-B2AE-9B0CA2834AC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nidikwa.GUI", "Nidikwa.GUI\Nidikwa.GUI.csproj", "{766ACFC4-B100-41F9-8A13-F5D1C730880E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +63,10 @@ Global
 		{6B9FC5C8-F842-406F-B2AE-9B0CA2834AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B9FC5C8-F842-406F-B2AE-9B0CA2834AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B9FC5C8-F842-406F-B2AE-9B0CA2834AC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{766ACFC4-B100-41F9-8A13-F5D1C730880E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{766ACFC4-B100-41F9-8A13-F5D1C730880E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{766ACFC4-B100-41F9-8A13-F5D1C730880E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{766ACFC4-B100-41F9-8A13-F5D1C730880E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

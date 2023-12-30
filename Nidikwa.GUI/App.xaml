@@ -1,0 +1,45 @@
+﻿<Application x:Class="Nidikwa.GUI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Nidikwa.GUI"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <SolidColorBrush
+                        x:Key="MainColorSolid"
+                        Color="#021b80" />
+                    <SolidColorBrush
+                        x:Key="MainColorDarkerSolid"
+                        Color="#001259" />
+                    <LinearGradientBrush
+                        x:Key="MainColor"
+                        StartPoint="0,0"
+                        EndPoint="1,1">
+                        <GradientStop
+                            Color="#5297eb"
+                            Offset="0.0" />
+                        <GradientStop
+                            Color="#021b80"
+                            Offset="1.0" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush
+                        x:Key="MainColorDarker"
+                        StartPoint="0,0"
+                        EndPoint="1,1">
+                        <GradientStop
+                            Color="#1c67c4"
+                            Offset="0.0" />
+                        <GradientStop
+                            Color="#001259"
+                            Offset="1.0" />
+                    </LinearGradientBrush>
+                    <FontFamily x:Key="Montserrat">pack://application:,,,/Fonts/#Montserrat</FontFamily>
+                </ResourceDictionary>
+                <ResourceDictionary
+                    Source="ButtonStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

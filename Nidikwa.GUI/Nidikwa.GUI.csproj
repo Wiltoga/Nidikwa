@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="assets\Montserrat-Medium.ttf" />
+    <None Remove="assets\start-record-alt.png" />
+    <None Remove="assets\start-record.png" />
+    <None Remove="assets\stop-record-alt.png" />
+    <None Remove="assets\stop-record.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ReactiveUI" Version="19.5.31" />
+    <PackageReference Include="ReactiveUI.Fody" Version="19.5.31" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nidikwa.Sdk\Nidikwa.Sdk.csproj" />
+    <ProjectReference Include="..\Nidikwa.Service\Nidikwa.Service.csproj" Publish="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Fonts\Montserrat-Medium.ttf" />
+    <Resource Include="assets\start-record-alt.png" />
+    <Resource Include="assets\start-record.png" />
+    <Resource Include="assets\stop-record-alt.png" />
+    <Resource Include="assets\stop-record.png" />
+  </ItemGroup>
+
+</Project>
