@@ -76,29 +76,42 @@ internal class PipeManagerWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var pipeName = configuration.GetValue<string>("PipeName");
-        if (pipeName is null)
-            throw new ArgumentNullException("PipeName");
-        int clientNumberCounter = 1;
-
-        while (!stoppingToken.IsCancellationRequested)
+        var mutex = new Mutex(true, "Nidikwa.Service.Mutex", out var created);
+        if (!created)
         {
-            try
-            {
-                var serverStream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances);
-                logger.LogInformation("New named pipe '{pipeName}' opened", pipeName);
-                await serverStream.WaitForConnectionAsync(stoppingToken);
-                logger.LogInformation("Client #{clientNumberCounter} connected", clientNumberCounter);
+            Environment.Exit(0);
+            return;
+        }
+        try
+        {
+            var pipeName = configuration.GetValue<string>("PipeName");
+            if (pipeName is null)
+                throw new ArgumentNullException("PipeName");
+            int clientNumberCounter = 1;
 
-                _ = HandleClient(serverStream, clientNumberCounter, stoppingToken);
-                ++clientNumberCounter;
-            }
-            catch (OperationCanceledException)
-            { }
-            catch (Exception ex)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogError(ex, "{Message}", ex.Message);
+                try
+                {
+                    var serverStream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances);
+                    logger.LogInformation("New named pipe '{pipeName}' opened", pipeName);
+                    await serverStream.WaitForConnectionAsync(stoppingToken);
+                    logger.LogInformation("Client #{clientNumberCounter} connected", clientNumberCounter);
+
+                    _ = HandleClient(serverStream, clientNumberCounter, stoppingToken);
+                    ++clientNumberCounter;
+                }
+                catch (OperationCanceledException)
+                { }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "{Message}", ex.Message);
+                }
             }
+        }
+        finally
+        {
+            mutex.ReleaseMutex();
         }
     }
 }
