@@ -2,7 +2,7 @@
 
 namespace Nidikwa.Sdk
 {
-    public interface IControllerService
+    public interface IControllerService : IDisposable
     {
         Task<Result> DeleteQueueItemAsync(Guid[] itemIds, CancellationToken token = default);
 

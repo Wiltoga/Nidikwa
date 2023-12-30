@@ -118,4 +118,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync(RouteEndpoints.EventDevicesChanged, token);
     }
+
+    public void Dispose()
+    {
+        pipeClientStream.Close();
+    }
 }
