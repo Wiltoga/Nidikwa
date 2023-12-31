@@ -7,11 +7,11 @@ namespace Nidikwa.Cli;
 [Operation("wait-list-queue", "wlq", "Waits until the queue of the service changes")]
 internal class WaitQueueOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         try
         {
-            var instance = await SdkHandler.GetInstanceAsync();
+            var instance = await SdkHandler.GetInstanceAsync(host, port);
 
             var result = await instance.WaitQueueChangedAsync();
             if (result.Code != Common.ResultCodes.Success)

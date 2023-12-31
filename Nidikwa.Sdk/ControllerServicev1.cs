@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Nidikwa.Common;
-using System.IO.Pipes;
+using System.Net.Sockets;
 using System.Text;
 
 namespace Nidikwa.Sdk;
@@ -18,11 +18,11 @@ internal class ControllerServicev1 : IControllerService
         }
     };
 
-    private NamedPipeClientStream pipeClientStream;
+    private Socket client;
 
-    public ControllerServicev1(NamedPipeClientStream client)
+    public ControllerServicev1(Socket client)
     {
-        pipeClientStream = client;
+        this.client = client;
     }
 
     private async Task<Result> GetAsync(string input, CancellationToken token, object? data = null)
@@ -32,13 +32,13 @@ internal class ControllerServicev1 : IControllerService
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
-            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length), token);
-            await pipeClientStream.WriteAsync(bytes, token);
+            await client.SendAsync(BitConverter.GetBytes(bytes.Length), SocketFlags.None, token).ConfigureAwait(false);
+            await client.SendAsync(bytes, SocketFlags.None, token).ConfigureAwait(false);
 
             var responseLengthBytes = new byte[sizeof(int)];
-            await pipeClientStream.ReadAsync(responseLengthBytes, token);
+            await client.ReceiveAsync(responseLengthBytes, SocketFlags.None, token).ConfigureAwait(false);
             var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
-            await pipeClientStream.ReadAsync(responseBytes, token);
+            await client.ReceiveAsync(responseBytes, SocketFlags.None, token).ConfigureAwait(false);
             var result = JsonConvert.DeserializeObject<Result>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
             return result ?? new Result { Code = ResultCodes.NoResponse };
         }
@@ -59,13 +59,13 @@ internal class ControllerServicev1 : IControllerService
         try
         {
             var bytes = Encoding.UTF8.GetBytes(input);
-            await pipeClientStream.WriteAsync(BitConverter.GetBytes(bytes.Length), token);
-            await pipeClientStream.WriteAsync(bytes, token);
+            await client.SendAsync(BitConverter.GetBytes(bytes.Length), SocketFlags.None, token).ConfigureAwait(false);
+            await client.SendAsync(bytes, SocketFlags.None, token).ConfigureAwait(false);
 
             var responseLengthBytes = new byte[sizeof(int)];
-            await pipeClientStream.ReadAsync(responseLengthBytes, token);
+            await client.ReceiveAsync(responseLengthBytes, SocketFlags.None, token).ConfigureAwait(false);
             var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
-            await pipeClientStream.ReadAsync(responseBytes, token);
+            await client.ReceiveAsync(responseBytes, SocketFlags.None, token).ConfigureAwait(false);
             var result = JsonConvert.DeserializeObject<Result<T>>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
             return result ?? new Result<T> { Code = ResultCodes.NoResponse };
         }
@@ -121,6 +121,6 @@ internal class ControllerServicev1 : IControllerService
 
     public void Dispose()
     {
-        pipeClientStream.Close();
+        client.Close();
     }
 }

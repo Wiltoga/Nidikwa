@@ -9,6 +9,8 @@ namespace Nidikwa.GUI.ViewModels
 {
     public class MainViewModel : DestroyableReactiveObject
     {
+        private const string host = "localhost";
+        private const int port = 17854;
         [Reactive]
         public bool Connected { get; set; }
         [Reactive]
@@ -90,7 +92,7 @@ namespace Nidikwa.GUI.ViewModels
                 {
                     try
                     {
-                        Service = await ControllerService.ConnectAsync(Token);
+                        Service = await ControllerService.ConnectAsync(host, port, Token);
                         Service.DestroyWith(this);
                         break;
                     }
@@ -120,7 +122,7 @@ namespace Nidikwa.GUI.ViewModels
                 {
                     try
                     {
-                        DeviceChangeEvent = await ControllerService.ConnectAsync(Token);
+                        DeviceChangeEvent = await ControllerService.ConnectAsync(host, port, Token);
                         DeviceChangeEvent.DestroyWith(this);
                         _ = Task.Run(() => DeviceLoop(DeviceChangeEvent));
                         break;
@@ -141,7 +143,7 @@ namespace Nidikwa.GUI.ViewModels
                 {
                     try
                     {
-                        StatusChangeEvent = await ControllerService.ConnectAsync(Token);
+                        StatusChangeEvent = await ControllerService.ConnectAsync(host, port, Token);
                         StatusChangeEvent.DestroyWith(this);
                         _ = Task.Run(() => StatusLoop(StatusChangeEvent));
                         break;
@@ -162,7 +164,7 @@ namespace Nidikwa.GUI.ViewModels
                 {
                     try
                     {
-                        QueueChangeEvent = await ControllerService.ConnectAsync(Token);
+                        QueueChangeEvent = await ControllerService.ConnectAsync(host, port, Token);
                         QueueChangeEvent.DestroyWith(this);
                         _ = Task.Run(() => QueueLoop(QueueChangeEvent));
                         break;

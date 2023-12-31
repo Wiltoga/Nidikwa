@@ -6,11 +6,11 @@ namespace Nidikwa.Cli;
 [Operation("status", "ss", "Returns the current status of the service")]
 internal class StatusOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         try
         {
-            var instance = await SdkHandler.GetInstanceAsync();
+            var instance = await SdkHandler.GetInstanceAsync(host, port);
 
             Console.Write(JsonConvert.SerializeObject(await instance.GetStatusAsync(), IOperation.JsonSettings));
         }

@@ -1,4 +1,6 @@
 ﻿using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 
 namespace Nidikwa.Sdk;
@@ -6,8 +8,7 @@ namespace Nidikwa.Sdk;
 public static class ControllerService
 {
     private static readonly TimeSpan timeout = TimeSpan.FromSeconds(5);
-    private const string pipeName = "Nidikwa.Service.Pipe";
-    private static Dictionary<ushort, Func<NamedPipeClientStream, IControllerService>> _controllerServiceConstructors;
+    private static Dictionary<ushort, Func<Socket, IControllerService>> _controllerServiceConstructors;
 
     static ControllerService()
     {
@@ -20,26 +21,46 @@ public static class ControllerService
             if (version is null)
                 continue;
 
-            var constructor = type.GetConstructor(new[] { typeof(NamedPipeClientStream) });
+            var constructor = type.GetConstructor(new[] { typeof(Socket) });
 
             if (constructor is null)
                 continue;
 
-            _controllerServiceConstructors.Add(version.Value, (NamedPipeClientStream client) => (IControllerService)constructor.Invoke(new[] { client }));
+            _controllerServiceConstructors.Add(version.Value, (Socket client) => (IControllerService)constructor.Invoke(new[] { client }));
         }
     }
 
-    public static async Task<IControllerService> ConnectAsync(CancellationToken token = default)
+    public static async Task<IControllerService> ConnectAsync(string host, int port, CancellationToken token = default)
     {
-        var pipeClientStream = new NamedPipeClientStream(pipeName);
-        await pipeClientStream.ConnectAsync((int)timeout.TotalMilliseconds, token);
-        await pipeClientStream.WriteAsync(BitConverter.GetBytes(_controllerServiceConstructors.Count), token);
+        var ipHostInfo = await Dns.GetHostEntryAsync(host);
+        var ipAddress = ipHostInfo.AddressList[0];
+        var endpoint = new IPEndPoint(ipAddress, port);
+        var client = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        var connectionToken = new CancellationTokenSource();
+        var errorCount = 0;
+        while(true)
+        {
+            try
+            {
+                await client.ConnectAsync(endpoint, connectionToken.Token).ConfigureAwait(false);
+                break;
+            }
+            catch (SocketException)
+            {
+                ++errorCount;
+                if (errorCount == 5)
+                    throw new TimeoutException();
+                await Task.Delay(1000).ConfigureAwait(false);
+            }
+        }
+
+        await client.SendAsync(BitConverter.GetBytes(_controllerServiceConstructors.Count), SocketFlags.None, token).ConfigureAwait(false);
         foreach (var service in _controllerServiceConstructors)
         {
-            await pipeClientStream.WriteAsync(BitConverter.GetBytes(service.Key), token);
+            await client.SendAsync(BitConverter.GetBytes(service.Key), SocketFlags.None, token).ConfigureAwait(false);
         }
         var versionBytes = new byte[sizeof(ushort)];
-        await pipeClientStream.ReadAsync(versionBytes, token);
+        await client.ReceiveAsync(versionBytes, SocketFlags.None, token).ConfigureAwait(false);
         var version = BitConverter.ToUInt16(versionBytes, 0);
 
         if (!_controllerServiceConstructors.TryGetValue(version, out var controllerConstructor))
@@ -47,6 +68,6 @@ public static class ControllerService
             throw new InvalidOperationException("No suitable controller found");
         }
 
-        return controllerConstructor.Invoke(pipeClientStream);
+        return controllerConstructor.Invoke(client);
     }
 }

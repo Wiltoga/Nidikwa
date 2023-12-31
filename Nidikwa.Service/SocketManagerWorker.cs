@@ -1,28 +1,29 @@
-﻿using System.IO.Pipes;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace Nidikwa.Service;
 
-internal class PipeManagerWorker(
-    ILogger<PipeManagerWorker> logger,
+internal class SocketManagerWorker(
+    ILogger<SocketManagerWorker> logger,
     IConfiguration configuration,
     IServiceScopeFactory serviceScopeFactory
 ) : BackgroundService
 {
-    private async Task HandleClient(NamedPipeServerStream serverStream, int clientNumber, CancellationToken stoppingToken)
+    private async Task HandleClient(Socket socket, int clientNumber, CancellationToken stoppingToken)
     {
         using (var scope = serviceScopeFactory.CreateScope())
         {
             try
             {
                 var handledCountBytes = new byte[sizeof(int)];
-                await serverStream.ReadAsync(handledCountBytes, stoppingToken);
+                await socket.ReceiveAsync(handledCountBytes, stoppingToken);
                 var handledCount = BitConverter.ToInt32(handledCountBytes);
                 var handledVersions = new List<ushort>();
                 for (int i = 0;i<handledCount;++i)
                 {
                     var versionBytes = new byte[sizeof(ushort)];
-                    await serverStream.ReadAsync(versionBytes, stoppingToken);
+                    await socket.ReceiveAsync(versionBytes, stoppingToken);
                     handledVersions.Add(BitConverter.ToUInt16(versionBytes));
                 }
                 logger.LogInformation("Client versions : {versions}", string.Join(", ", handledVersions.Select(version => version.ToString())));
@@ -31,13 +32,13 @@ internal class PipeManagerWorker(
                 logger.LogInformation("Compatible versions : {versions}", string.Join(", ", compatibleVersions.Select(version => version.ToString())));
                 var usedVersion = compatibleVersions.Max();
                 var controller = scope.ServiceProvider.GetRequiredKeyedService<IController>(usedVersion);
-                await serverStream.WriteAsync(BitConverter.GetBytes(usedVersion), stoppingToken);
+                await socket.SendAsync(BitConverter.GetBytes(usedVersion), stoppingToken);
                 logger.LogInformation("Using controller version {version}", usedVersion);
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var dataLengthBytes = new byte[4];
 
-                    var recieved = await serverStream.ReadAsync(dataLengthBytes, stoppingToken);
+                    var recieved = await socket.ReceiveAsync(dataLengthBytes, stoppingToken);
                     if (recieved == 0)
                     {
                         break;
@@ -45,7 +46,7 @@ internal class PipeManagerWorker(
                     stoppingToken.ThrowIfCancellationRequested();
 
                     var data = new byte[BitConverter.ToInt32(dataLengthBytes)];
-                    recieved = await serverStream.ReadAsync(data, stoppingToken);
+                    recieved = await socket.ReceiveAsync(data, stoppingToken);
                     if (recieved == 0)
                     {
                         break;
@@ -55,14 +56,17 @@ internal class PipeManagerWorker(
                     result = await controller.HandleRequestAsync(Encoding.UTF8.GetString(data));
                     var resultBytes = Encoding.UTF8.GetBytes(result);
 
-                    await serverStream.WriteAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
+                    await socket.SendAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
                     stoppingToken.ThrowIfCancellationRequested();
 
-                    await serverStream.WriteAsync(resultBytes, stoppingToken);
+                    await socket.SendAsync(resultBytes, stoppingToken);
                     stoppingToken.ThrowIfCancellationRequested();
                 }
             }
             catch (OperationCanceledException)
+            {
+            }
+            catch (SocketException)
             {
             }
             catch (Exception ex)
@@ -70,7 +74,7 @@ internal class PipeManagerWorker(
                 logger.LogError(ex, "{Message}", ex.Message);
             }
         }
-        serverStream.Close();
+        socket.Close();
         logger.LogInformation("Client #{clientNumber} disconnected", clientNumber);
     }
 
@@ -84,21 +88,27 @@ internal class PipeManagerWorker(
         }
         try
         {
-            var pipeName = configuration.GetValue<string>("PipeName");
-            if (pipeName is null)
-                throw new ArgumentNullException("PipeName");
+            var port = configuration.GetValue<int>("port");
+            if (port <= 1024)
+                throw new ArgumentException("port");
+            var ipHostInfo = await Dns.GetHostEntryAsync("localhost", stoppingToken);
+            var ipAddress = ipHostInfo.AddressList[0];
+            var ipEndPoint = new IPEndPoint(ipAddress, port);
             int clientNumberCounter = 1;
+
+            var listener = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            listener.Bind(ipEndPoint);
+            listener.Listen(100);
+            logger.LogInformation("listening on port {port}", ipEndPoint.Port);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    var serverStream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances);
-                    logger.LogInformation("New named pipe '{pipeName}' opened", pipeName);
-                    await serverStream.WaitForConnectionAsync(stoppingToken);
+                    var handler = await listener.AcceptAsync(stoppingToken);
                     logger.LogInformation("Client #{clientNumberCounter} connected", clientNumberCounter);
 
-                    _ = HandleClient(serverStream, clientNumberCounter, stoppingToken);
+                    _ = HandleClient(handler, clientNumberCounter, stoppingToken);
                     ++clientNumberCounter;
                 }
                 catch (OperationCanceledException)

@@ -5,7 +5,7 @@
     """, true)]
 internal class HelpOperation : IOperation
 {
-    public Task ExecuteAsync(string[] args)
+    public Task ExecuteAsync(string host, int port, string[] args)
     {
         if (args.Length == 0)
             args = IOperation.AllOperations.Select(operation => operation.Metadata.FullName).ToArray();

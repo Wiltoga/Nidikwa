@@ -8,7 +8,7 @@ namespace Nidikwa.Cli;
 [Operation("export", "e", "Exports the selected queued item to an usable folder")]
 internal class ExportOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         if (args.Length != 2)
         {

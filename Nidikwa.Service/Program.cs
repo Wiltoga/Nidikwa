@@ -6,7 +6,7 @@ using Nidikwa.Service;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services
-    .AddHostedService<PipeManagerWorker>()
+    .AddHostedService<SocketManagerWorker>()
     .AddSingleton<IAudioService, AudioService>()
     .AddControllers()
     .AddSingleton(new JsonSerializerSettings

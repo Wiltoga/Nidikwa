@@ -8,7 +8,7 @@ namespace Nidikwa.Cli;
 [Operation("list-devices", "ld", "Displays the list of available devices")]
 internal class ListDevicesOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         if (args.Length == 0)
         {

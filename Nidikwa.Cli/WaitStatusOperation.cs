@@ -6,11 +6,11 @@ namespace Nidikwa.Cli;
 [Operation("wait-status", "wss", "Waits until the status of the service changes")]
 internal class WaitStatusOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         try
         {
-            var instance = await SdkHandler.GetInstanceAsync();
+            var instance = await SdkHandler.GetInstanceAsync(host, port);
 
             var result = await instance.WaitStatusChangedAsync();
             if (result.Code != Common.ResultCodes.Success)

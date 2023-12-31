@@ -7,7 +7,7 @@ namespace Nidikwa.Cli;
 [Operation("list-queue", "lq", "Displays the queue of the service")]
 internal class ListQueueOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         Console.Write(JsonConvert.SerializeObject(new Result<RecordSessionMetadata[]>
         {

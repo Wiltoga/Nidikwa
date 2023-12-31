@@ -34,5 +34,5 @@ internal interface IOperation
 
         }
     }
-    public Task ExecuteAsync(string[] args);
+    public Task ExecuteAsync(string host, int port, string[] args);
 }

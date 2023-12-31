@@ -2,6 +2,27 @@
 
 IOperation calledOperation;
 
+var host = "localhost";
+var port = 17854;
+
+while (args.Length > 0)
+{
+    if (args[0] == "--host")
+    {
+        host = args[1];
+        args = args[2..];
+    }
+    else if (args[0] == "--port")
+    {
+        port = int.Parse(args[1]);
+        args = args[2..];
+    }
+    else
+    {
+        break;
+    }
+}
+
 if (args.Length > 0)
 {
     var name = args[0];
@@ -22,8 +43,8 @@ else
 
     calledOperation = constructor();
 
-    Console.WriteLine("Usage : Nidikwa.CLI.exe <operation name> [<operation parameters>]");
+    Console.WriteLine("Usage : Nidikwa.CLI.exe [--host <host>] [--port <port>] <operation name> [<operation parameters>]");
     Console.WriteLine();
 }
 
-await calledOperation.ExecuteAsync(args.Skip(1).ToArray());
+await calledOperation.ExecuteAsync(host, port, args.Skip(1).ToArray());

@@ -6,7 +6,7 @@ namespace Nidikwa.Cli;
 [Operation("record", "r", "Starts recording using the given deviceIds as parameters")]
 internal class RecordOperation : IOperation
 {
-    public async Task ExecuteAsync(string[] args)
+    public async Task ExecuteAsync(string host, int port, string[] args)
     {
         if (args.Length <= 1)
         {
@@ -19,7 +19,7 @@ internal class RecordOperation : IOperation
         var duration = TimeSpan.Parse(args[0]);
         try
         {
-            var instance = await SdkHandler.GetInstanceAsync();
+            var instance = await SdkHandler.GetInstanceAsync(host, port);
 
             Console.Write(JsonConvert.SerializeObject(await instance.StartRecordingAsync(new RecordParams(args.Skip(1).ToArray(), duration)), IOperation.JsonSettings));
         }
