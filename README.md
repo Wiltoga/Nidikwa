@@ -1,5 +1,3 @@
-[![.NET](https://github.com/Wiltoga/Nidikwa/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Wiltoga/Nidikwa/actions/workflows/dotnet.yml)
-
 ## Nidikwa
 
 Nidikwa is the predecessor to [Idikwa](https://github.com/Wiltoga/Idikwa), a software I made to record the last seconds/minutes of audio on a computer. The former had a few issues, was slow and could use a lot of memory for its cache.
