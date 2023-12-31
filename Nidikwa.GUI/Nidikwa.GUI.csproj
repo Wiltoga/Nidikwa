@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Nidikwa.Cli\Nidikwa.Cli.csproj" />
     <ProjectReference Include="..\Nidikwa.Sdk\Nidikwa.Sdk.csproj" />
     <ProjectReference Include="..\Nidikwa.Service\Nidikwa.Service.csproj" Publish="true" />
   </ItemGroup>
