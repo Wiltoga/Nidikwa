@@ -138,13 +138,12 @@
                     </TextBlock>
                 </StackPanel>
             </Button>
-            <ListBox
+            <ItemsControl
                 Grid.Row="2"
-                SelectionChanged="DataGrid_SelectionChanged"
                 ItemsSource="{Binding Path=Devices}">
-                <ListBox.Style>
+                <ItemsControl.Style>
                     <Style
-                        TargetType="ListBox">
+                        TargetType="ItemsControl">
                         <Style.Triggers>
                             <DataTrigger
                                 Binding="{Binding Path=Recording}"
@@ -155,8 +154,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </ListBox.Style>
-                <ListBox.ItemTemplate>
+                </ItemsControl.Style>
+                <ItemsControl.ItemTemplate>
                     <DataTemplate
                         DataType="vm:DeviceViewModel">
                         <StackPanel
@@ -169,8 +168,8 @@
                                 Text="{Binding Path=Reference.Name}" />
                         </StackPanel>
                     </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
 
         <StackPanel

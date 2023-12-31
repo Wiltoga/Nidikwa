@@ -32,13 +32,5 @@ namespace Nidikwa.GUI
         {
             await ViewModel.StartStopRecordAsync();
         }
-
-        private void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var datagrid = sender as DataGrid;
-            if (datagrid?.SelectedItem is null)
-                return;
-            datagrid.SelectedCells.Clear();
-        }
     }
 }
