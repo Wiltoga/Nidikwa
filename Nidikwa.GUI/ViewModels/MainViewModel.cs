@@ -3,6 +3,8 @@ using Nidikwa.Models;
 using Nidikwa.Sdk;
 using ReactiveUI.Fody.Helpers;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 using System.Windows;
 
 namespace Nidikwa.GUI.ViewModels
@@ -86,6 +88,7 @@ namespace Nidikwa.GUI.ViewModels
 
         private async Task ConnectMainServiceAsync()
         {
+            var errorShown = false;
             try
             {
                 while (!Token.IsCancellationRequested)
@@ -98,15 +101,10 @@ namespace Nidikwa.GUI.ViewModels
                     }
                     catch (TimeoutException)
                     {
-                        if (MessageBox.Show("Service not started, do you want to start it now ?", "Error", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                        if (!errorShown)
                         {
-                            new Process
-                            {
-                                StartInfo = new ProcessStartInfo("Nidikwa.Service.exe")
-                                {
-                                    UseShellExecute = true
-                                }
-                            }.Start();
+                            MessageBox.Show($"Unable to connect, the service is likely not started or listening on a port different than {port}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            errorShown = true;
                         }
                     }
                 }
