@@ -12,7 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="assets\input-device-alt.png" />
+    <None Remove="assets\input-device.png" />
     <None Remove="assets\Montserrat-Medium.ttf" />
+    <None Remove="assets\output-device-alt.png" />
+    <None Remove="assets\output-device.png" />
     <None Remove="assets\start-record-alt.png" />
     <None Remove="assets\start-record.png" />
     <None Remove="assets\stop-record-alt.png" />
@@ -31,6 +35,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="assets\input-device-alt.png" />
+    <Resource Include="assets\input-device.png" />
+    <Resource Include="assets\output-device-alt.png" />
+    <Resource Include="assets\output-device.png" />
     <Resource Include="Fonts\Montserrat-Medium.ttf" />
     <Resource Include="assets\start-record-alt.png" />
     <Resource Include="assets\start-record.png" />
