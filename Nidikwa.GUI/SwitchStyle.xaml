@@ -65,10 +65,6 @@
                             Property="IsMouseOver"
                             Value="True">
                             <Setter
-                                TargetName="content"
-                                Property="Background"
-                                Value="{DynamicResource MainColor}" />
-                            <Setter
                                 TargetName="back"
                                 Property="Background"
                                 Value="{DynamicResource BackColorDarkerSolid}" />
