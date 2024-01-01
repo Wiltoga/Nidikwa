@@ -214,5 +214,27 @@ namespace Nidikwa.GUI.ViewModels
             }
             catch (OperationCanceledException) { }
         }
+
+        public async Task AddQueueAsync()
+        {
+            if (Service is null)
+                return;
+            try
+            {
+                var result = await Service.GetStatusAsync(Token);
+                if (result.Code == ResultCodes.Success)
+                {
+                    if (result.Data == RecordStatus.Recording)
+                    {
+                        await Service.AddToQueueAsync(Token);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(result.Code.ToString() + " : " + result.ErrorMessage, "error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
     }
 }

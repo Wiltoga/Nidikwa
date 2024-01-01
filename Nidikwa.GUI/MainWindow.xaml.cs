@@ -32,5 +32,10 @@ namespace Nidikwa.GUI
         {
             await ViewModel.StartStopRecordAsync();
         }
+
+        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.AddQueueAsync();
+        }
     }
 }
