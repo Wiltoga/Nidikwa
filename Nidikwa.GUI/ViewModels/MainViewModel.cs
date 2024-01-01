@@ -21,6 +21,8 @@ namespace Nidikwa.GUI.ViewModels
         public DeviceViewModel[] Devices { get; set; }
         [Reactive]
         public RecordSessionFile[] Queue { get; set; }
+        [Reactive]
+        public TimeSpan Duration { get; set; }
 
         public IControllerService? Service { get; set; }
         public IControllerService? DeviceChangeEvent { get; set; }
@@ -33,6 +35,7 @@ namespace Nidikwa.GUI.ViewModels
             Recording = false;
             Devices = [];
             Queue = [];
+            Duration = TimeSpan.FromSeconds(30);
         }
 
         private void SetDevices(Device[] devices)
@@ -204,7 +207,7 @@ namespace Nidikwa.GUI.ViewModels
                         await Service.StartRecordingAsync(new RecordParams(Devices
                             .Where(device => device.Selected)
                             .Select(device => device.Reference.Id)
-                            .ToArray(), TimeSpan.FromSeconds(15)), Token);
+                            .ToArray(), Duration), Token);
                     }
                 }
                 else

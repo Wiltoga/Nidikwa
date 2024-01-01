@@ -11,6 +11,12 @@
                         x:Key="BackColorSolid"
                         Color="#f4f4f8" />
                     <SolidColorBrush
+                        x:Key="BackColorDarkerSolid"
+                        Color="#e0e0e8" />
+                    <SolidColorBrush
+                        x:Key="BackColorDarkerDarkerSolid"
+                        Color="#d0d0d8" />
+                    <SolidColorBrush
                         x:Key="MainColorSolid"
                         Color="#021b80" />
                     <SolidColorBrush
@@ -41,9 +47,11 @@
                     <FontFamily x:Key="Montserrat">pack://application:,,,/Fonts/#Montserrat</FontFamily>
                 </ResourceDictionary>
                 <ResourceDictionary
-                    Source="ButtonStyle.xaml" />
+                    Source="ActionStyle.xaml" />
                 <ResourceDictionary
                     Source="SwitchStyle.xaml" />
+                <ResourceDictionary
+                    Source="FollowupStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -139,86 +139,108 @@
                     </TextBlock>
                 </StackPanel>
             </Button>
-            <ScrollViewer
-                Grid.Row="2"
-                Margin="15"
-                HorizontalScrollBarVisibility="Disabled"
-                VerticalScrollBarVisibility="Auto">
-                <ItemsControl
-                    ItemsSource="{Binding Path=Devices}">
-                    <ItemsControl.Style>
-                        <Style
-                            TargetType="ItemsControl">
-                            <Style.Triggers>
-                                <DataTrigger
-                                    Binding="{Binding Path=Recording}"
-                                    Value="True">
-                                    <Setter
-                                        Property="IsEnabled"
-                                        Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ItemsControl.Style>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate
-                            DataType="vm:DeviceViewModel">
-                            <CheckBox
-                                Margin="5"
-                                Style="{DynamicResource Switch}"
-                                IsChecked="{Binding Path=Selected, Mode=TwoWay}">
-                                <StackPanel
-                                    Orientation="Horizontal">
-                                    <local:AltImage
-                                        Margin="5">
-                                        <local:AltImage.Style>
-                                            <Style
-                                                TargetType="local:AltImage">
-                                                <Setter
-                                                    Property="Source"
-                                                    Value="/assets/input-device.png" />
-                                                <Style.Triggers>
-                                                    <DataTrigger
-                                                        Binding="{Binding Path=Reference.Type}"
-                                                        Value="Output">
-                                                        <Setter
-                                                            Property="Visibility"
-                                                            Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </local:AltImage.Style>
-                                    </local:AltImage>
-                                    <local:AltImage
-                                        Margin="5">
-                                        <local:AltImage.Style>
-                                            <Style
-                                                TargetType="local:AltImage">
-                                                <Setter
-                                                    Property="Source"
-                                                    Value="/assets/output-device.png" />
-                                                <Style.Triggers>
-                                                    <DataTrigger
-                                                        Binding="{Binding Path=Reference.Type}"
-                                                        Value="Input">
-                                                        <Setter
-                                                            Property="Visibility"
-                                                            Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </local:AltImage.Style>
-                                    </local:AltImage>
-                                    <TextBlock
-                                        Margin="5"
-                                        VerticalAlignment="Center"
-                                        Text="{Binding Path=Reference.Name}" />
-                                </StackPanel>
-                            </CheckBox>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <Grid
+                Grid.Row="2">
+                <Grid.Style>
+                    <Style
+                        TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger
+                                Binding="{Binding Path=Recording}"
+                                Value="True">
+                                <Setter
+                                    Property="IsEnabled"
+                                    Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions>
+                    <RowDefinition
+                        Height="auto" />
+                    <RowDefinition
+                        Height="*" />
+                </Grid.RowDefinitions>
+                <Button
+                    Grid.Row="0"
+                    Margin="20,5"
+                    Style="{StaticResource Followup}">
+                    <StackPanel
+                        Orientation="Horizontal">
+                        <Label>
+                            Duration :
+                        </Label>
+                        <Label
+                            Content="{Binding Path=Duration}" />
+                    </StackPanel>
+                </Button>
+                <ScrollViewer
+                    Grid.Row="1"
+                    Margin="15,5"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+                    <ItemsControl
+                        ItemsSource="{Binding Path=Devices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate
+                                DataType="vm:DeviceViewModel">
+                                <CheckBox
+                                    Margin="5"
+                                    Style="{DynamicResource Switch}"
+                                    IsChecked="{Binding Path=Selected, Mode=TwoWay}">
+                                    <StackPanel
+                                        Orientation="Horizontal">
+                                        <local:AltImage
+                                            Margin="5">
+                                            <local:AltImage.Style>
+                                                <Style
+                                                    TargetType="local:AltImage">
+                                                    <Setter
+                                                        Property="Source"
+                                                        Value="/assets/input-device.png" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger
+                                                            Binding="{Binding Path=Reference.Type}"
+                                                            Value="Output">
+                                                            <Setter
+                                                                Property="Visibility"
+                                                                Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </local:AltImage.Style>
+                                        </local:AltImage>
+                                        <local:AltImage
+                                            Margin="5">
+                                            <local:AltImage.Style>
+                                                <Style
+                                                    TargetType="local:AltImage">
+                                                    <Setter
+                                                        Property="Source"
+                                                        Value="/assets/output-device.png" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger
+                                                            Binding="{Binding Path=Reference.Type}"
+                                                            Value="Input">
+                                                            <Setter
+                                                                Property="Visibility"
+                                                                Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </local:AltImage.Style>
+                                        </local:AltImage>
+                                        <TextBlock
+                                            Margin="5"
+                                            VerticalAlignment="Center"
+                                            Text="{Binding Path=Reference.Name}" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
         </Grid>
 
         <StackPanel
