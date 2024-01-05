@@ -12,6 +12,8 @@ internal interface IAudioService
 
     Task StartRecordAsync(RecordParams args);
 
+    Task<Device[]> GetRecordingDevicesAsync();
+
     Task StopRecordAsync();
 
     Task<ReadOnlyMemory<byte>> SaveAsNdkwAsync();

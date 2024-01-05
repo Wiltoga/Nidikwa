@@ -66,6 +66,15 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         MMDeviceEnumerator.RegisterEndpointNotificationCallback(this);
     }
 
+    private Device MapDevice(MMDevice device)
+    {
+        return new Device(
+                    device.ID,
+                    device.FriendlyName,
+                    device.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
+                );
+    }
+
     public Task StopRecordAsync()
     {
         logger.LogInformation("Stop recording");
@@ -145,11 +154,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
             sessionData.cacheCopy.Dispose();
 
             return new DeviceSession(
-                new Device(
-                    sessionData.MmDevice.ID,
-                    sessionData.MmDevice.FriendlyName,
-                    sessionData.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
-                ),
+                MapDevice(sessionData.MmDevice),
                 waveBytes.ToArray()
             );
         })).ConfigureAwait(false);
@@ -337,5 +342,16 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         if (await IsRecordingAsync())
             await StopRecordAsync();
         MMDeviceEnumerator.UnregisterEndpointNotificationCallback(this);
+    }
+
+    public Task<Device[]> GetRecordingDevicesAsync()
+    {
+        return Locked(() =>
+        {
+            if (Recordings is null)
+                throw new InvalidOperationException("The service is not recording");
+
+            return Task.FromResult(Recordings.Select(session => MapDevice(session.MmDevice)).ToArray());
+        });
     }
 }

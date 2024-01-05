@@ -1,4 +1,5 @@
 ﻿using Nidikwa.Common;
+using Nidikwa.Models;
 
 namespace Nidikwa.Sdk
 {
@@ -13,6 +14,7 @@ namespace Nidikwa.Sdk
         Task<Result<RecordStatus>> GetStatusAsync(CancellationToken token = default);
 
         Task<Result> WaitStatusChangedAsync(CancellationToken token = default);
+        Task<Result<Device[]>> GetRecordingDevicesAsync(CancellationToken token = default);
 
         Task<Result> WaitDevicesChangedAsync(CancellationToken token = default);
     }

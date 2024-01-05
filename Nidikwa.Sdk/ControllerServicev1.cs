@@ -3,6 +3,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Nidikwa.Common;
 using Nidikwa.FileEncoding;
+using Nidikwa.Models;
 using System.Net.Sockets;
 using System.Text;
 
@@ -157,4 +158,8 @@ internal class ControllerServicev1 : IControllerService
         client.Close();
     }
 
+    public Task<Result<Device[]>> GetRecordingDevicesAsync(CancellationToken token = default)
+    {
+        return GetAsync<Device[]>(RouteEndpoints.GetRecordingDevices, token);
+    }
 }

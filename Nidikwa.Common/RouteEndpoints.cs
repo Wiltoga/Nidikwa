@@ -8,6 +8,7 @@ public static class RouteEndpoints
     public const string WaitUntilStop = "wait-until-stop";
     public const string SaveAsNdkw = "save-as-ndkw";
     public const string GetStatus = "get-status";
+    public const string GetRecordingDevices = "get-recording-devices";
     public const string EventStatusChanged = "event-status-changed";
     public const string EventDevicesChanged = "event-devices-changed";
 }

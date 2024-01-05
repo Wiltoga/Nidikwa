@@ -14,6 +14,12 @@ internal partial class Controller
         return Success();
     }
 
+    [Endpoint(RouteEndpoints.GetRecordingDevices)]
+    public async Task<Result<Device[]>> GetRecordingDevices()
+    {
+        return Success(await audioService.GetRecordingDevicesAsync());
+    }
+
     [Endpoint(RouteEndpoints.StopRecording)]
     public async Task<Result> StopRecording()
     {

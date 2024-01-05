@@ -2,7 +2,7 @@
   "profiles": {
     "Nidikwa.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "q"
+      "commandLineArgs": "help"
     }
   }
 }
