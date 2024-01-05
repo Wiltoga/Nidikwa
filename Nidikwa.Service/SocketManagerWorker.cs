@@ -52,14 +52,7 @@ internal class SocketManagerWorker(
                         break;
                     }
                     stoppingToken.ThrowIfCancellationRequested();
-                    string result;
-                    result = await controller.HandleRequestAsync(Encoding.UTF8.GetString(data));
-                    var resultBytes = Encoding.UTF8.GetBytes(result);
-
-                    await socket.SendAsync(BitConverter.GetBytes(resultBytes.Length), stoppingToken);
-                    stoppingToken.ThrowIfCancellationRequested();
-
-                    await socket.SendAsync(resultBytes, stoppingToken);
+                    await controller.HandleRequestAsync(Encoding.UTF8.GetString(data), new NetworkStream(socket, false));
                     stoppingToken.ThrowIfCancellationRequested();
                 }
             }

@@ -11,7 +11,7 @@ internal class RecordOperation : IOperation
         if (args.Length <= 1)
         {
             Console.WriteLine($"""
-                Usage : record <duration> [<deviceIds>]
+                Usage : record <duration> <device1Id> [<device2Id> ...]
                 Example : record 00:05:00 {Guid.Empty:B}.{Guid.NewGuid():B}
                 """);
             return;

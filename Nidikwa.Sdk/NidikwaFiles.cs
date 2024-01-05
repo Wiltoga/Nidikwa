@@ -1,4 +1,4 @@
-﻿namespace Nidikwa.Common;
+﻿namespace Nidikwa.Sdk;
 
 public static class NidikwaFiles
 {
@@ -6,12 +6,12 @@ public static class NidikwaFiles
     private const string NidikwaFolderName = "Nidikwa";
     private const string QueueFolderName = "Queued";
     public static string QueueFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), WiltogaFolderName, NidikwaFolderName, QueueFolderName);
-
     public static void EnsureQueueFolderExists()
     {
-        if (!Directory.Exists(QueueFolder))
+        var folder = QueueFolder;
+        if (!Directory.Exists(folder))
         {
-            Directory.CreateDirectory(QueueFolder);
+            Directory.CreateDirectory(folder);
         }
     }
 }

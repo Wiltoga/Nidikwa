@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Nidikwa.Common;
 using Nidikwa.Models;
+using Nidikwa.Sdk;
 
 namespace Nidikwa.Cli;
 

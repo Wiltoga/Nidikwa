@@ -7,7 +7,6 @@ namespace Nidikwa.Sdk;
 
 public static class ControllerService
 {
-    private static readonly TimeSpan timeout = TimeSpan.FromSeconds(5);
     private static Dictionary<ushort, Func<Socket, IControllerService>> _controllerServiceConstructors;
 
     static ControllerService()
@@ -32,7 +31,7 @@ public static class ControllerService
 
     public static async Task<IControllerService> ConnectAsync(string host, int port, CancellationToken token = default)
     {
-        var ipHostInfo = await Dns.GetHostEntryAsync(host);
+        var ipHostInfo = await Dns.GetHostEntryAsync(host).ConfigureAwait(false);
         var ipAddress = ipHostInfo.AddressList[0];
         var endpoint = new IPEndPoint(ipAddress, port);
         var client = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);

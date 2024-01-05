@@ -93,7 +93,7 @@ public class Editor : IDisposable
         using var stream = new FileStream(sessionFile.File, FileMode.Open, FileAccess.Read, FileShare.Read);
         var reader = new SessionEncoder();
 
-        var session = await reader.ParseSessionAsync(stream, null, token);
+        var session = await reader.ParseSessionAsync(stream, null, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         var devicesEnumerator = new MMDeviceEnumerator();
         var device = devicesEnumerator.GetDevice(playbackDeviceId);
@@ -108,10 +108,10 @@ public class Editor : IDisposable
                 using var wavereader = new WaveFileReader(waveData);
                 using var resampler = new MediaFoundationResampler(wavereader, OutputFormat);
                 var rawData = new MemoryStream();
-                await resampler.CopyToAsync(rawData);
+                await resampler.CopyToAsync(rawData).ConfigureAwait(false);
                 rawData.Seek(0, SeekOrigin.Begin);
                 return new KeyValuePair<string, DeviceSessionEdition>(session.Device.Id, new DeviceSessionEdition(rawData, resampler.WaveFormat));
-            }));
+            })).ConfigureAwait(false);
 
         return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), device);
     }
@@ -219,7 +219,7 @@ public class Editor : IDisposable
                     MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 192_000);
                     break;
             }
-        });
+        }).ConfigureAwait(false);
     }
 
     public async Task<Dictionary<string, float[]>> GetAverageSamplesBetweenAsync(TimeSpan start, TimeSpan end, int samplesCount, CancellationToken token)
@@ -281,7 +281,7 @@ public class Editor : IDisposable
             }
 
             return new KeyValuePair<string, float[]>(deviceSession.Key, resultSamples);
-        }))));
+        }))).ConfigureAwait(false));
     }
 
     public void Dispose()

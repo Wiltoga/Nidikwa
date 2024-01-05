@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Nidikwa.Common;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Text;
 
 namespace Nidikwa.Service.Controllerv1;
 
@@ -41,7 +43,8 @@ internal sealed partial class Controller : IController
                 continue;
             if (method.ReturnType.GetGenericTypeDefinition() != typeof(Task<>))
                 continue;
-            if (method.ReturnType.GenericTypeArguments[0] != typeof(Result))
+            if (method.ReturnType.GenericTypeArguments[0] != typeof(Result)
+                && method.ReturnType.GenericTypeArguments[0] != typeof(ContentResult))
             {
                 if (method.ReturnType.GenericTypeArguments[0].IsGenericType)
                 {
@@ -79,7 +82,22 @@ internal sealed partial class Controller : IController
         }
     }
 
-    public async Task<string> HandleRequestAsync(string input)
+    private async Task WriteStringAsync(string data, Stream stream)
+    {
+        var resultBytes = Encoding.UTF8.GetBytes(data);
+
+        await stream.WriteAsync(BitConverter.GetBytes(resultBytes.Length));
+
+        await stream.WriteAsync(resultBytes);
+    }
+
+    private async Task WriteContentAsync(ReadOnlyMemory<byte> content, Stream stream)
+    {
+        await stream.WriteAsync(BitConverter.GetBytes(content.Length));
+        await stream.WriteAsync(content);
+    }
+
+    public async Task HandleRequestAsync(string input, Stream stream)
     {
         string enpointName;
         string? data = null;
@@ -95,7 +113,8 @@ internal sealed partial class Controller : IController
         catch (IndexOutOfRangeException)
         {
             logger.LogError("Invalid input structure '{input}'", input);
-            return JsonConvert.SerializeObject(InvalidInputStructure($"Invalid input structure '{input}'"), serializerSettings);
+            await WriteStringAsync(JsonConvert.SerializeObject(InvalidInputStructure($"Invalid input structure '{input}'"), serializerSettings), stream);
+            return;
         }
 
         if (Endpoints.TryGetValue(enpointName, out var endpoint))
@@ -110,21 +129,27 @@ internal sealed partial class Controller : IController
             catch (InvalidOperationException ex)
             {
                 logger.LogError(ex, "{message}", ex.Message);
-                return JsonConvert.SerializeObject(InvalidState(ex.Message), serializerSettings);
+                await WriteStringAsync(JsonConvert.SerializeObject(InvalidState(ex.Message), serializerSettings), stream);
+                return;
             }
             catch (KeyNotFoundException ex)
             {
                 logger.LogError(ex, "{message}", ex.Message);
-                return JsonConvert.SerializeObject(NotFound(ex.Message), serializerSettings);
+                await WriteStringAsync(JsonConvert.SerializeObject(NotFound(ex.Message), serializerSettings), stream);
+                return;
             }
             var response = JsonConvert.SerializeObject(result, serializerSettings);
             logger.LogInformation("Response : '{response}'", response);
-            return response;
+            await WriteStringAsync(response, stream);
+            if (result is ContentResult contentResult)
+            {
+                await WriteContentAsync(contentResult.AdditionnalContent, stream);
+            }
         }
         else
         {
             logger.LogError("Invalid endpoint '{enpointName}'", enpointName);
-            return JsonConvert.SerializeObject(InvalidEndpoint($"Invalid endpoint '{enpointName}'"), serializerSettings);
+            await WriteStringAsync(JsonConvert.SerializeObject(InvalidEndpoint($"Invalid endpoint '{enpointName}'"), serializerSettings), stream);
         }
     }
 }

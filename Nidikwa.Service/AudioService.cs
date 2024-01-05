@@ -48,7 +48,6 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
     private object activeRecordingMutex;
     private bool activeRecording;
 
-    public event EventHandler? QueueChanged;
     public event EventHandler? StatusChanged;
     public event EventHandler? DevicesChanged;
 
@@ -104,10 +103,10 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         });
     }
 
-    public Task<RecordSessionFile> AddToQueueAsync()
+    public async Task<ReadOnlyMemory<byte>> SaveAsNdkwAsync()
     {
         logger.LogInformation("Add to queue");
-        return Locked(async () =>
+        var (sessionsData, duration) = await Locked(async () =>
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
@@ -130,47 +129,45 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 }
                 return (cacheCopy, recording.MmDevice, recording.Capture.WaveFormat);
             })).ConfigureAwait(false);
-
             var duration = TimeSpan.FromSeconds(Recordings.First().Cache.Length / (double)sessionsData.First().WaveFormat.AverageBytesPerSecond);
 
-            var deviceSessions = await Task.WhenAll(sessionsData.Select(async sessionData =>
-            {
-                using var waveBytes = new MemoryStream();
-                using var writer = new WaveFileWriter(waveBytes, sessionData.WaveFormat);
-                sessionData.cacheCopy.Seek(0, SeekOrigin.Begin);
-                await sessionData.cacheCopy.CopyToAsync(writer);
-                await writer.FlushAsync();
-                sessionData.cacheCopy.Dispose();
-
-                return new DeviceSession(
-                    new Device(
-                        sessionData.MmDevice.ID,
-                        sessionData.MmDevice.FriendlyName,
-                        sessionData.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
-                    ),
-                    waveBytes.ToArray()
-                );
-            })).ConfigureAwait(false);
-
-            var resultFile = new RecordSession(
-                new RecordSessionMetadata(
-                    Guid.NewGuid(),
-                    DateTimeOffset.Now,
-                    duration
-                ),
-                deviceSessions
-            );
-            var writer = new SessionEncoder();
-            NidikwaFiles.EnsureQueueFolderExists();
-            var file = Path.Combine(NidikwaFiles.QueueFolder, $"{resultFile.Metadata.Id}.ndkw");
-            using var fileStream = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            await writer.WriteSessionAsync(resultFile, fileStream).ConfigureAwait(false);
-
-            QueueChanged?.Invoke(this, EventArgs.Empty);
-
-            return new RecordSessionFile(resultFile.Metadata, file);
+            return (sessionsData, duration);
         });
+
+
+        var deviceSessions = await Task.WhenAll(sessionsData.Select(async sessionData =>
+        {
+            using var waveBytes = new MemoryStream();
+            using var writer = new WaveFileWriter(waveBytes, sessionData.WaveFormat);
+            sessionData.cacheCopy.Seek(0, SeekOrigin.Begin);
+            await sessionData.cacheCopy.CopyToAsync(writer);
+            await writer.FlushAsync();
+            sessionData.cacheCopy.Dispose();
+
+            return new DeviceSession(
+                new Device(
+                    sessionData.MmDevice.ID,
+                    sessionData.MmDevice.FriendlyName,
+                    sessionData.MmDevice.DataFlow == DataFlow.Render ? DeviceType.Output : DeviceType.Input
+                ),
+                waveBytes.ToArray()
+            );
+        })).ConfigureAwait(false);
+
+        var resultFile = new RecordSession(
+            new RecordSessionMetadata(
+                Guid.NewGuid(),
+                DateTimeOffset.Now,
+                duration
+            ),
+            deviceSessions
+        );
+
+
+        var encoder = new SessionEncoder();
+        using var memory = new MemoryStream();
+        await encoder.WriteSessionAsync(resultFile, memory);
+        return memory.ToArray();
     }
 
     public Task StartRecordAsync(RecordParams args)
@@ -291,35 +288,6 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         {
             return Task.FromResult(Recordings is not null);
         });
-    }
-
-    public async Task DeleteQueueItemsAsync(Guid[] ids)
-    {
-        var sessionEncoder = new SessionEncoder();
-        var mutex = new object();
-        var deleted = false;
-        await Task.WhenAll(Directory.GetFiles(NidikwaFiles.QueueFolder).Select(async file =>
-        {
-            try
-            {
-                RecordSessionMetadata metadata;
-                using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    metadata = await sessionEncoder.ParseMetadataAsync(stream);
-                }
-                if (ids.Contains(metadata.Id))
-                {
-                    File.Delete(file);
-                    lock (mutex)
-                    {
-                        deleted = true;
-                    }
-                }
-            }
-            catch { }
-        })).ConfigureAwait(false);
-        if (deleted)
-            QueueChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void OnDeviceStateChanged(string deviceId, DeviceState newState)

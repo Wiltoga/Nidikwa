@@ -1,4 +1,6 @@
-﻿namespace Nidikwa.Common;
+﻿using System.Text.Json.Serialization;
+
+namespace Nidikwa.Common;
 
 public enum ResultCodes
 {
@@ -22,4 +24,9 @@ public class Result
 public class Result<T> : Result
 {
     public T? Data { get; init; }
+}
+public class ContentResult : Result
+{
+    [JsonIgnore]
+    public ReadOnlyMemory<byte> AdditionnalContent { get; set; }
 }

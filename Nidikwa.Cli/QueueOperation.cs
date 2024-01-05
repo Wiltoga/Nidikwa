@@ -12,7 +12,7 @@ internal class QueueOperation : IOperation
         {
             var instance = await SdkHandler.GetInstanceAsync(host, port);
 
-            Console.Write(JsonConvert.SerializeObject(await instance.AddToQueueAsync(), IOperation.JsonSettings));
+            Console.Write(JsonConvert.SerializeObject(await instance.SaveAsync(), IOperation.JsonSettings));
         }
         catch (TimeoutException)
         {

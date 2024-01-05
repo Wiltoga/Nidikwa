@@ -1,6 +1,8 @@
-﻿using Nidikwa.FileEncoding;
+﻿using Nidikwa.Common;
+using Nidikwa.FileEncoding;
+using Nidikwa.Models;
 
-namespace Nidikwa.Common;
+namespace Nidikwa.Sdk;
 
 public static class QueueAccessor
 {
@@ -9,23 +11,26 @@ public static class QueueAccessor
         NidikwaFiles.EnsureQueueFolderExists();
         var result = new List<RecordSessionFile>();
         var reader = new SessionEncoder();
-        foreach (var file in Directory.GetFiles(NidikwaFiles.QueueFolder))
+        foreach (var file in Directory.GetFiles(NidikwaFiles.QueueFolder, "*.ndkw"))
         {
             using var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
             try
             {
-                var metadata = await reader.ParseMetadataAsync(fileStream, null, token);
+                var metadata = await reader.ParseMetadataAsync(fileStream, null, token).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
 
                 result.Add(new RecordSessionFile(metadata, file));
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch { }
+            catch (FormatException) { }
+            catch (ArgumentException) { }
         }
 
         return result.ToArray();
+    }
+
+    public static string GenerateFileName(RecordSessionMetadata metadata)
+    {
+        NidikwaFiles.EnsureQueueFolderExists();
+        return Path.Combine(NidikwaFiles.QueueFolder, metadata.Id.ToString() + ".ndkw");
     }
 }

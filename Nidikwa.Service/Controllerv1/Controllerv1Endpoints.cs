@@ -1,17 +1,12 @@
 ﻿using Nidikwa.Common;
+using Nidikwa.Models;
+using System.IO;
 
 namespace Nidikwa.Service.Controllerv1;
 
 [ControllerVersion(1)]
 internal partial class Controller
 {
-    [Endpoint(RouteEndpoints.DeleteFromQueue)]
-    public async Task<Result> DeleteQueueItem(Guid[] ids)
-    {
-        await audioService.DeleteQueueItemsAsync(ids);
-        return Success();
-    }
-
     [Endpoint(RouteEndpoints.StartRecording)]
     public async Task<Result> StartRecording(RecordParams args)
     {
@@ -26,30 +21,16 @@ internal partial class Controller
         return Success();
     }
 
-    [Endpoint(RouteEndpoints.AddToQueue)]
-    public async Task<Result<RecordSessionFile>> AddToQueue()
+    [Endpoint(RouteEndpoints.SaveAsNdkw)]
+    public async Task<ContentResult> SaveAsNdkw()
     {
-        return Success(await audioService.AddToQueueAsync());
+        return Success(await audioService.SaveAsNdkwAsync());
     }
 
     [Endpoint(RouteEndpoints.GetStatus)]
     public async Task<Result<RecordStatus>> GetStatus()
     {
         return Success((await audioService.IsRecordingAsync()) ? RecordStatus.Recording : RecordStatus.Stopped);
-    }
-
-    [Endpoint(RouteEndpoints.EventQueueChanged)]
-    public async Task<Result> EventQueueChanged()
-    {
-        var taskSource = new TaskCompletionSource();
-        void callback(object? sender, EventArgs e)
-        {
-            taskSource.SetResult();
-        }
-        audioService.QueueChanged += callback;
-        await taskSource.Task;
-        audioService.QueueChanged -= callback;
-        return Success();
     }
 
     [Endpoint(RouteEndpoints.EventStatusChanged)]

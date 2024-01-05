@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Nidikwa.Common;
+using Nidikwa.FileEncoding;
 using System.Net.Sockets;
 using System.Text;
 
@@ -52,6 +53,41 @@ internal class ControllerServicev1 : IControllerService
         }
     }
 
+    private async Task<ContentResult> GetContentAsync(string input, CancellationToken token, object? data = null)
+    {
+        if (data is not null)
+            input += $":{JsonConvert.SerializeObject(data, serializerSettings)}";
+
+        ContentResult? result;
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(input);
+            await client.SendAsync(BitConverter.GetBytes(bytes.Length), SocketFlags.None, token).ConfigureAwait(false);
+            await client.SendAsync(bytes, SocketFlags.None, token).ConfigureAwait(false);
+
+            var responseLengthBytes = new byte[sizeof(int)];
+            await client.ReceiveAsync(responseLengthBytes, SocketFlags.None, token).ConfigureAwait(false);
+            var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
+            await client.ReceiveAsync(responseBytes, SocketFlags.None, token).ConfigureAwait(false);
+            result = JsonConvert.DeserializeObject<ContentResult>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
+            var contentSizeBytes = new byte[sizeof(int)];
+            await client.ReceiveAsync(contentSizeBytes, SocketFlags.None, token).ConfigureAwait(false);
+            var content = new byte[BitConverter.ToInt32(contentSizeBytes)];
+            await client.ReceiveAsync(content, SocketFlags.None, token).ConfigureAwait(false);
+            result ??= new ContentResult { Code = ResultCodes.NoResponse };
+            result.AdditionnalContent = content;
+        }
+        catch (TimeoutException)
+        {
+            result = new ContentResult { Code = ResultCodes.Timeout };
+        }
+        catch (IOException)
+        {
+            result = new ContentResult { Code = ResultCodes.Disconnected };
+        }
+        return result;
+    }
+
     private async Task<Result<T>> GetAsync<T>(string input, CancellationToken token, object? data = null)
     {
         if (data is not null)
@@ -89,24 +125,21 @@ internal class ControllerServicev1 : IControllerService
         return GetAsync(RouteEndpoints.StopRecording, token);
     }
 
-    public Task<Result> AddToQueueAsync(CancellationToken token = default)
+    public async Task<Result<RecordSessionFile>> SaveAsync(CancellationToken token = default)
     {
-        return GetAsync(RouteEndpoints.AddToQueue, token);
+        var resultSessionFile = await GetContentAsync(RouteEndpoints.SaveAsNdkw, token).ConfigureAwait(false);
+        if (resultSessionFile.Code != ResultCodes.Success)
+            return new Result<RecordSessionFile> { Code = resultSessionFile.Code };
+        var decoder = new SessionEncoder();
+        var metadata = await decoder.ParseMetadataAsync(resultSessionFile.AdditionnalContent.AsStream(), null, token).ConfigureAwait(false);
+        using var stream = new FileStream(QueueAccessor.GenerateFileName(metadata), FileMode.Create, FileAccess.Write);
+        await stream.WriteAsync(resultSessionFile.AdditionnalContent, token).ConfigureAwait(false);
+        return new Result<RecordSessionFile> { Code = ResultCodes.Success, Data = new RecordSessionFile(metadata, stream.Name) };
     }
 
     public Task<Result<RecordStatus>> GetStatusAsync(CancellationToken token = default)
     {
         return GetAsync<RecordStatus>(RouteEndpoints.GetStatus, token);
-    }
-
-    public Task<Result> DeleteQueueItemAsync(Guid[] itemIds, CancellationToken token = default)
-    {
-        return GetAsync(RouteEndpoints.DeleteFromQueue, token, itemIds);
-    }
-
-    public Task<Result> WaitQueueChangedAsync(CancellationToken token = default)
-    {
-        return GetAsync(RouteEndpoints.EventQueueChanged, token);
     }
 
     public Task<Result> WaitStatusChangedAsync(CancellationToken token = default)
@@ -123,4 +156,5 @@ internal class ControllerServicev1 : IControllerService
     {
         client.Close();
     }
+
 }

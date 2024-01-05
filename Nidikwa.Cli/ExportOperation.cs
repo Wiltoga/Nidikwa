@@ -2,6 +2,7 @@
 using Nidikwa.Common;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
+using Nidikwa.Sdk;
 
 namespace Nidikwa.Cli;
 

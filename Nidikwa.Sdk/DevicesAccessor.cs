@@ -15,12 +15,12 @@ public static class DevicesAccessor
     }
     public static async Task<Device> GetDefaultOutputDeviceAsync()
     {
-        var mmDevice = await Task.Run(() => Enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia));
+        var mmDevice = await Task.Run(() => Enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia)).ConfigureAwait(false);
         return new Device(mmDevice.ID, mmDevice.FriendlyName, DeviceType.Output);
     }
     public static async Task<Device> GetDefaultInputDeviceAsync()
     {
-        var mmDevice = await Task.Run(() => Enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia));
+        var mmDevice = await Task.Run(() => Enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia)).ConfigureAwait(false);
         return new Device(mmDevice.ID, mmDevice.FriendlyName, DeviceType.Input);
     }
 }
