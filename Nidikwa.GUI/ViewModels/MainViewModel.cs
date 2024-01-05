@@ -49,13 +49,30 @@ namespace Nidikwa.GUI.ViewModels
             try
             {
                 SetDevices(await DevicesAccessor.GetAvailableDevicesAsync());
+                await AutoCheckDevicesAsync(controller);
                 while (!Token.IsCancellationRequested)
                 {
                     await controller.WaitDevicesChangedAsync(Token);
                     SetDevices(await DevicesAccessor.GetAvailableDevicesAsync());
+                    await AutoCheckDevicesAsync(controller);
                 }
             }
             catch (OperationCanceledException) { }
+        }
+
+        private async Task AutoCheckDevicesAsync(IControllerService controller)
+        {
+            if (Recording)
+            {
+                var recordedDevicesResult = await controller.GetRecordingDevicesAsync();
+                if (recordedDevicesResult.Code != ResultCodes.Success)
+                    return;
+                foreach (var device in Devices)
+                {
+                    var recorded = recordedDevicesResult.Data?.Any(d => d.Id == device.Reference.Id) is true;
+                    device.Selected = recorded;
+                }
+            }
         }
 
         private async Task StatusLoop(IControllerService controller)
@@ -65,12 +82,14 @@ namespace Nidikwa.GUI.ViewModels
                 var result = await controller.GetStatusAsync(Token);
                 if (result.Code == Common.ResultCodes.Success)
                     Recording = result.Data == Common.RecordStatus.Recording;
+                await AutoCheckDevicesAsync(controller);
                 while (!Token.IsCancellationRequested)
                 {
                     await controller.WaitStatusChangedAsync(Token);
                     result = await controller.GetStatusAsync(Token);
                     if (result.Code == Common.ResultCodes.Success)
                         Recording = result.Data == Common.RecordStatus.Recording;
+                    await AutoCheckDevicesAsync(controller);
                 }
             }
             catch (OperationCanceledException) { }
