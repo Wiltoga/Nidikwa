@@ -73,49 +73,35 @@ internal class SocketManagerWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var mutex = new Mutex(true, "Nidikwa.Service.Mutex", out var created);
-        if (!created)
-        {
-            logger.LogCritical("Another session is already running.");
-            Environment.Exit(0);
-            return;
-        }
-        try
-        {
-            var port = configuration.GetValue<int>("port");
-            if (port <= 1024)
-                throw new ArgumentException("port");
-            var ipHostInfo = await Dns.GetHostEntryAsync("localhost", stoppingToken);
-            var ipAddress = ipHostInfo.AddressList[0];
-            var ipEndPoint = new IPEndPoint(ipAddress, port);
-            int clientNumberCounter = 1;
+        var port = configuration.GetValue<int>("port");
+        if (port <= 1024)
+            throw new ArgumentException("port");
+        var ipHostInfo = await Dns.GetHostEntryAsync("localhost", stoppingToken);
+        var ipAddress = ipHostInfo.AddressList[0];
+        var ipEndPoint = new IPEndPoint(ipAddress, port);
+        int clientNumberCounter = 1;
 
-            var listener = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(ipEndPoint);
-            listener.Listen(100);
-            logger.LogInformation("listening on port {port}", ipEndPoint.Port);
+        var listener = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        listener.Bind(ipEndPoint);
+        listener.Listen(100);
+        logger.LogInformation("listening on port {port}", ipEndPoint.Port);
 
-            while (!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
             {
-                try
-                {
-                    var handler = await listener.AcceptAsync(stoppingToken);
-                    logger.LogInformation("Client #{clientNumberCounter} connected", clientNumberCounter);
+                var handler = await listener.AcceptAsync(stoppingToken);
+                logger.LogInformation("Client #{clientNumberCounter} connected", clientNumberCounter);
 
-                    _ = HandleClient(handler, clientNumberCounter, stoppingToken);
-                    ++clientNumberCounter;
-                }
-                catch (OperationCanceledException)
-                { }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "{Message}", ex.Message);
-                }
+                _ = HandleClient(handler, clientNumberCounter, stoppingToken);
+                ++clientNumberCounter;
             }
-        }
-        finally
-        {
-            mutex.ReleaseMutex();
+            catch (OperationCanceledException)
+            { }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "{Message}", ex.Message);
+            }
         }
     }
 }
