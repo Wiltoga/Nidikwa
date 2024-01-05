@@ -167,20 +167,30 @@ namespace Nidikwa.GUI.ViewModels
         {
             QueueWatcher = new FileSystemWatcher();
             QueueWatcher.Path = NidikwaFiles.QueueFolder;
-            QueueWatcher.NotifyFilter = NotifyFilters.LastWrite;
+            QueueWatcher.NotifyFilter = NotifyFilters.Attributes
+                                 | NotifyFilters.CreationTime
+                                 | NotifyFilters.DirectoryName
+                                 | NotifyFilters.FileName
+                                 | NotifyFilters.LastAccess
+                                 | NotifyFilters.LastWrite
+                                 | NotifyFilters.Security
+                                 | NotifyFilters.Size;
             QueueWatcher.Filter = "*.ndkw";
-            QueueWatcher.Changed += QueueWatcher_Changed;
+            QueueWatcher.IncludeSubdirectories = false;
+            QueueWatcher.Changed += QueueWatcher_Callback;
+            QueueWatcher.Deleted += QueueWatcher_Callback;
             QueueWatcher.EnableRaisingEvents = true;
             Queue = await QueueAccessor.GetQueueAsync(Token);
 
             DisposeWhenDestroyed(() =>
             {
-                QueueWatcher.Changed -= QueueWatcher_Changed;
+                QueueWatcher.Created -= QueueWatcher_Callback;
+                QueueWatcher.Deleted -= QueueWatcher_Callback;
                 QueueWatcher.Dispose();
             });
         }
 
-        private async void QueueWatcher_Changed(object sender, FileSystemEventArgs e)
+        private async void QueueWatcher_Callback(object sender, FileSystemEventArgs e)
         {
             Queue = await QueueAccessor.GetQueueAsync(Token);
         }
