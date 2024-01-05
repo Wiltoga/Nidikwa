@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Shapes;
 
 namespace Nidikwa.GUI.ViewModels
 {
@@ -26,8 +27,8 @@ namespace Nidikwa.GUI.ViewModels
 
         public IControllerService? Service { get; set; }
         public IControllerService? DeviceChangeEvent { get; set; }
-        public IControllerService? QueueChangeEvent { get; set; }
         public IControllerService? StatusChangeEvent { get; set; }
+        public FileSystemWatcher? QueueWatcher { get; set; }
 
         public MainViewModel()
         {
@@ -70,20 +71,6 @@ namespace Nidikwa.GUI.ViewModels
                     result = await controller.GetStatusAsync(Token);
                     if (result.Code == Common.ResultCodes.Success)
                         Recording = result.Data == Common.RecordStatus.Recording;
-                }
-            }
-            catch (OperationCanceledException) { }
-        }
-
-        private async Task QueueLoop(IControllerService controller)
-        {
-            try
-            {
-                Queue = await QueueAccessor.GetQueueAsync(Token);
-                while (!Token.IsCancellationRequested)
-                {
-                    await controller.WaitStatusChangedAsync(Token);
-                    Queue = await QueueAccessor.GetQueueAsync(Token);
                 }
             }
             catch (OperationCanceledException) { }
@@ -157,25 +144,26 @@ namespace Nidikwa.GUI.ViewModels
             catch (OperationCanceledException) { }
         }
 
-        private async Task ConnectQueueServiceAsync()
+        public async Task StartQueueWatcherAsync()
         {
-            try
+            QueueWatcher = new FileSystemWatcher();
+            QueueWatcher.Path = NidikwaFiles.QueueFolder;
+            QueueWatcher.NotifyFilter = NotifyFilters.LastWrite;
+            QueueWatcher.Filter = "*.ndkw";
+            QueueWatcher.Changed += QueueWatcher_Changed;
+            QueueWatcher.EnableRaisingEvents = true;
+            Queue = await QueueAccessor.GetQueueAsync(Token);
+
+            DisposeWhenDestroyed(() =>
             {
-                while (!Token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        QueueChangeEvent = await ControllerService.ConnectAsync(host, port, Token);
-                        QueueChangeEvent.DestroyWith(this);
-                        _ = Task.Run(() => QueueLoop(QueueChangeEvent));
-                        break;
-                    }
-                    catch (TimeoutException)
-                    {
-                    }
-                }
-            }
-            catch (OperationCanceledException) { }
+                QueueWatcher.Changed -= QueueWatcher_Changed;
+                QueueWatcher.Dispose();
+            });
+        }
+
+        private async void QueueWatcher_Changed(object sender, FileSystemEventArgs e)
+        {
+            Queue = await QueueAccessor.GetQueueAsync(Token);
         }
 
         public async Task ConnectAsync()
@@ -184,7 +172,6 @@ namespace Nidikwa.GUI.ViewModels
                 ConnectMainServiceAsync(),
                 ConnectDeviceServiceAsync(),
                 ConnectStatusServiceAsync(),
-                ConnectQueueServiceAsync(),
             ]);
             Connected = true;
         }
@@ -229,7 +216,7 @@ namespace Nidikwa.GUI.ViewModels
                 {
                     if (result.Data == RecordStatus.Recording)
                     {
-                        await Service.AddToQueueAsync(Token);
+                        await Service.SaveAsync(Token);
                     }
                 }
                 else

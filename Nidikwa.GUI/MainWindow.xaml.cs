@@ -25,7 +25,10 @@ namespace Nidikwa.GUI
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            await ViewModel.ConnectAsync();
+            await Task.WhenAll([
+                ViewModel.ConnectAsync(),
+                ViewModel.StartQueueWatcherAsync(),
+            ]);
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)

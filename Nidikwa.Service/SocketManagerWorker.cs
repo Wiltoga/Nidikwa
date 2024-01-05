@@ -76,6 +76,7 @@ internal class SocketManagerWorker(
         var mutex = new Mutex(true, "Nidikwa.Service.Mutex", out var created);
         if (!created)
         {
+            logger.LogCritical("Another session is already running.");
             Environment.Exit(0);
             return;
         }
