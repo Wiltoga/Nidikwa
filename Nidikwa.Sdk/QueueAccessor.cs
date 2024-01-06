@@ -29,7 +29,7 @@ public static class QueueAccessor
             catch (FormatException) { }
             catch (ArgumentException) { }
         }
-
+        result.Sort((left, right) => left.SessionMetadata.Date.CompareTo(right.SessionMetadata.Date));
         return result.ToArray();
     }
 

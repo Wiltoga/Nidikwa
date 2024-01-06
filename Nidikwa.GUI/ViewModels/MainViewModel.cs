@@ -2,6 +2,7 @@
 using Nidikwa.Models;
 using Nidikwa.Sdk;
 using ReactiveUI.Fody.Helpers;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;

@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Nidikwa.GUI"
         xmlns:vm="clr-namespace:Nidikwa.GUI.ViewModels"
+        xmlns:model="clr-namespace:Nidikwa.Models;assembly=Nidikwa.Models"
+        xmlns:common="clr-namespace:Nidikwa.Common;assembly=Nidikwa.Common"
         mc:Ignorable="d"
         Title="Nidikwa"
         Height="500"
@@ -14,6 +16,7 @@
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <local:DateConverter x:Key="DateConverter" />
     </Window.Resources>
     <local:DestroyableContextAttachedProperty.DestroyableContext>
         <vm:MainViewModel />
@@ -260,6 +263,57 @@
                     </ItemsControl>
                 </ScrollViewer>
             </Grid>
+        </Grid>
+        <Grid
+            Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition
+                    Height="auto" />
+                <RowDefinition
+                    Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock
+                Margin="20"
+                FontWeight="Bold"
+                FontSize="16"
+                TextDecorations="Underline"
+                Foreground="{DynamicResource MainColorDarker}"
+                HorizontalAlignment="Center">
+                SAVED SESSIONS
+            </TextBlock>
+            <ScrollViewer
+                Grid.Row="1"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl
+                    ItemsSource="{Binding Path=Queue}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate
+                            DataType="{x:Type common:RecordSessionFile}">
+                            <DockPanel
+                                Margin="10,5">
+                                <Button
+                                    Style="{StaticResource Followup}">
+                                    <StackPanel
+                                        Orientation="Horizontal">
+                                        <Label
+                                            Content="{Binding Path=SessionMetadata.Date, Converter={StaticResource DateConverter}}" />
+                                        <Label
+                                            Padding="0"
+                                            VerticalAlignment="Center"
+                                            Content="{Binding Path=SessionMetadata.TotalDuration.TotalSeconds}" />
+                                        <Label
+                                            VerticalAlignment="Center"
+                                            Padding="0">
+                                            s
+                                        </Label>
+                                    </StackPanel>
+                                </Button>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Grid>
 
         <StackPanel
