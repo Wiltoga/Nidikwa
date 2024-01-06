@@ -296,7 +296,7 @@
                                     <StackPanel
                                         Orientation="Horizontal">
                                         <Label
-                                            Content="{Binding Path=SessionMetadata.Date, Converter={StaticResource DateConverter}}" />
+                                            Content="{Binding Path=SessionMetadata.Date.LocalDateTime, Converter={StaticResource DateConverter}}" />
                                         <Label
                                             Padding="0"
                                             VerticalAlignment="Center"

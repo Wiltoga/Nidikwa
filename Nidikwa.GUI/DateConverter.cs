@@ -8,7 +8,7 @@ internal class DateConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is DateTimeOffset date)
+        if (value is DateTime date)
         {
             return date.ToString("g", CultureInfo.CurrentUICulture);
         }
