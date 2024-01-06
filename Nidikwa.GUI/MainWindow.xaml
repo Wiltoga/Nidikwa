@@ -12,6 +12,9 @@
         Loaded="Window_Loaded"
         FontFamily="{StaticResource Montserrat}"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
     <local:DestroyableContextAttachedProperty.DestroyableContext>
         <vm:MainViewModel />
     </local:DestroyableContextAttachedProperty.DestroyableContext>
@@ -264,6 +267,16 @@
             HorizontalAlignment="Right"
             Orientation="Horizontal"
             Grid.Row="1">
+            <Label
+                FontWeight="Bold"
+                Padding="10,0"
+                Visibility="{Binding Path=Recording, Converter={StaticResource BooleanToVisibilityConverter}}"
+                VerticalContentAlignment="Center"
+                Background="Red"
+                Foreground="White"
+                Margin="0,0,20,0">
+                RECORDING
+            </Label>
             <TextBlock
                 Margin="5">
                 Connection :
