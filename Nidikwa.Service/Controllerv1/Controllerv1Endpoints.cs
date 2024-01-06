@@ -20,6 +20,12 @@ internal partial class Controller
         return Success(await audioService.GetRecordingDevicesAsync());
     }
 
+    [Endpoint(RouteEndpoints.GetMaxDuration)]
+    public async Task<Result<TimeSpan>> GetMaxDuration()
+    {
+        return Success(await audioService.GetCurrentMaxDurationAsync());
+    }
+
     [Endpoint(RouteEndpoints.StopRecording)]
     public async Task<Result> StopRecording()
     {

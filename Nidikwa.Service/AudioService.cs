@@ -52,6 +52,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
     public event EventHandler? DevicesChanged;
 
     private DeviceRecording[]? Recordings { get; set; }
+    private TimeSpan CurrentMaxDuration { get; set; }
 
     public AudioService(
        ILogger<AudioService> logger
@@ -257,6 +258,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
             {
                 activeRecording = true;
             }
+            CurrentMaxDuration = args.CacheDuration;
             StatusChanged?.Invoke(this, EventArgs.Empty);
         });
     }
@@ -352,6 +354,17 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 throw new InvalidOperationException("The service is not recording");
 
             return Task.FromResult(Recordings.Select(session => MapDevice(session.MmDevice)).ToArray());
+        });
+    }
+
+    public Task<TimeSpan> GetCurrentMaxDurationAsync()
+    {
+        return Locked(() =>
+        {
+            if (Recordings is null)
+                throw new InvalidOperationException("The service is not recording");
+
+            return Task.FromResult(CurrentMaxDuration);
         });
     }
 }

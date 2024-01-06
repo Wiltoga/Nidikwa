@@ -162,4 +162,9 @@ internal class ControllerServicev1 : IControllerService
     {
         return GetAsync<Device[]>(RouteEndpoints.GetRecordingDevices, token);
     }
+
+    public Task<Result<TimeSpan>> GetRecordingDurationAsync(CancellationToken token = default)
+    {
+        return GetAsync<TimeSpan>(RouteEndpoints.GetMaxDuration, token);
+    }
 }

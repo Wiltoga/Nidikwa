@@ -9,6 +9,7 @@ public static class RouteEndpoints
     public const string SaveAsNdkw = "save-as-ndkw";
     public const string GetStatus = "get-status";
     public const string GetRecordingDevices = "get-recording-devices";
+    public const string GetMaxDuration = "get-max-duration";
     public const string EventStatusChanged = "event-status-changed";
     public const string EventDevicesChanged = "event-devices-changed";
 }
