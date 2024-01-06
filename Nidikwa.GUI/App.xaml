@@ -52,6 +52,8 @@
                     Source="SwitchStyle.xaml" />
                 <ResourceDictionary
                     Source="FollowupStyle.xaml" />
+                <ResourceDictionary
+                    Source="SliderStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

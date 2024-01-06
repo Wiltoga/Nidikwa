@@ -190,11 +190,10 @@
                     </StackPanel>
                     <Slider
                         VerticalAlignment="Center"
-                        Margin="10,5"
+                        Margin="30,5"
                         Minimum="5"
                         Maximum="60"
-                        Value="{Binding Path=DurationSeconds, Mode=TwoWay}"
-                        MaxWidth="200" />
+                        Value="{Binding Path=DurationSeconds, Mode=TwoWay}" />
                 </DockPanel>
                 <ScrollViewer
                     Grid.Row="1"
