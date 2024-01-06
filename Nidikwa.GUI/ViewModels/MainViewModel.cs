@@ -75,6 +75,17 @@ namespace Nidikwa.GUI.ViewModels
             }
         }
 
+        private async Task AutoExtractDurationAsync(IControllerService controller)
+        {
+            if (Recording)
+            {
+                var recordedDurationResult = await controller.GetRecordingDurationAsync();
+                if (recordedDurationResult.Code != ResultCodes.Success)
+                    return;
+                DurationSeconds = Math.Clamp((int)recordedDurationResult.Data.TotalSeconds, 5, 60);
+            }
+        }
+
         private async Task StatusLoop(IControllerService controller)
         {
             try
@@ -83,6 +94,7 @@ namespace Nidikwa.GUI.ViewModels
                 if (result.Code == Common.ResultCodes.Success)
                     Recording = result.Data == Common.RecordStatus.Recording;
                 await AutoCheckDevicesAsync(controller);
+                await AutoExtractDurationAsync(controller);
                 while (!Token.IsCancellationRequested)
                 {
                     await controller.WaitStatusChangedAsync(Token);
@@ -90,6 +102,7 @@ namespace Nidikwa.GUI.ViewModels
                     if (result.Code == Common.ResultCodes.Success)
                         Recording = result.Data == Common.RecordStatus.Recording;
                     await AutoCheckDevicesAsync(controller);
+                    await AutoExtractDurationAsync(controller);
                 }
             }
             catch (OperationCanceledException) { }
