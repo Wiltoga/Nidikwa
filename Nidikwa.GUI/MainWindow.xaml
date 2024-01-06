@@ -161,19 +161,35 @@
                     <RowDefinition
                         Height="*" />
                 </Grid.RowDefinitions>
-                <Button
+                <DockPanel
                     Grid.Row="0"
-                    Margin="20,5"
-                    Style="{StaticResource Followup}">
+                    Margin="20,5">
+                    <Label
+                        VerticalAlignment="Center"
+                        DockPanel.Dock="Left">
+                        Duration :
+                    </Label>
                     <StackPanel
-                        Orientation="Horizontal">
-                        <Label>
-                            Duration :
-                        </Label>
+                        DockPanel.Dock="Left"
+                        Orientation="Horizontal"
+                        MinWidth="50">
                         <Label
-                            Content="{Binding Path=Duration}" />
+                            VerticalAlignment="Center"
+                            Content="{Binding Path=DurationSeconds}" />
+                        <Label
+                            VerticalAlignment="Center"
+                            DockPanel.Dock="Left">
+                            s
+                        </Label>
                     </StackPanel>
-                </Button>
+                    <Slider
+                        VerticalAlignment="Center"
+                        Margin="10,5"
+                        Minimum="5"
+                        Maximum="60"
+                        Value="{Binding Path=DurationSeconds, Mode=TwoWay}"
+                        MaxWidth="200" />
+                </DockPanel>
                 <ScrollViewer
                     Grid.Row="1"
                     Margin="15,5"
