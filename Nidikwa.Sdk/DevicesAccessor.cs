@@ -6,7 +6,7 @@ namespace Nidikwa.Sdk;
 public static class DevicesAccessor
 {
     private static MMDeviceEnumerator? _enumerator;
-    private static MMDeviceEnumerator Enumerator => _enumerator ??= new MMDeviceEnumerator();
+    internal static MMDeviceEnumerator Enumerator => _enumerator ??= new MMDeviceEnumerator();
     public static Task<Device[]> GetAvailableDevicesAsync()
     {
         return Task.Run(() => Enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)

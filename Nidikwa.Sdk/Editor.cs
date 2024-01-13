@@ -40,7 +40,7 @@ public class Editor : IDisposable
         }
     }
 
-    private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, MMDevice playbackDevice)
+    private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, string playbackDevice)
     {
         File = file;
         Session = session;
@@ -54,7 +54,7 @@ public class Editor : IDisposable
 
         Volume = new VolumeSampleProvider(Scope.ToSampleProvider());
 
-        DeviceResampler = new MediaFoundationResampler(Volume.ToWaveProvider(), playbackDevice.AudioClient.MixFormat);
+        DeviceResampler = new MediaFoundationResampler(Volume.ToWaveProvider(), DevicesAccessor.Enumerator.GetDevice(playbackDevice).AudioClient.MixFormat);
 
         FullDuration = Scope.End = session.Metadata.TotalDuration;
     }
@@ -73,7 +73,7 @@ public class Editor : IDisposable
     public string File { get; }
     public RecordSession Session { get; }
     public bool IsPlaying { get; private set; }
-    private MMDevice PlaybackDevice { get; }
+    private string PlaybackDevice { get; }
     private IWavePlayer? Player { get; set; }
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
     private MixingWaveProvider32 Mixer { get; }
@@ -95,11 +95,6 @@ public class Editor : IDisposable
 
         var session = await reader.ParseSessionAsync(stream, null, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
-        var devicesEnumerator = new MMDeviceEnumerator();
-        var device = devicesEnumerator.GetDevice(playbackDeviceId);
-
-        if (device.DataFlow != DataFlow.Render)
-            throw new InvalidOperationException("The provided device is not an output device");
 
         var devices = await Task.WhenAll(session.DeviceSessions.ToArray().Select(
             async session =>
@@ -113,7 +108,7 @@ public class Editor : IDisposable
                 return new KeyValuePair<string, DeviceSessionEdition>(session.Device.Id, new DeviceSessionEdition(rawData, resampler.WaveFormat));
             })).ConfigureAwait(false);
 
-        return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), device);
+        return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), playbackDeviceId);
     }
 
     public void Play()
@@ -123,7 +118,9 @@ public class Editor : IDisposable
 
         IsPlaying = true;
 
-        Player = new WasapiOut(PlaybackDevice, AudioClientShareMode.Shared, true, 200);
+        var device = DevicesAccessor.Enumerator.GetDevice(PlaybackDevice);
+
+        Player = new WasapiOut(device, AudioClientShareMode.Shared, true, 200);
         Player.Init(DeviceResampler);
 
         Player.PlaybackStopped += Player_PlaybackStopped;
@@ -247,6 +244,7 @@ public class Editor : IDisposable
             var lastSampleIsMin = false;
             for (int i = 0; i < samplesCount; ++i)
             {
+                token.ThrowIfCancellationRequested();
                 var scope = deviceSession.Value.Samples.Span.Slice(startOffset + (i * samplesDelta), computedScope);
                 var max = 0f;
                 var min = 0f;
