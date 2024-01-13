@@ -1,5 +1,4 @@
-﻿using System.IO.Pipes;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 
@@ -36,21 +35,13 @@ public static class ControllerService
         var endpoint = new IPEndPoint(ipAddress, port);
         var client = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         var connectionToken = new CancellationTokenSource();
-        var errorCount = 0;
-        while(true)
+        try
         {
-            try
-            {
-                await client.ConnectAsync(endpoint, connectionToken.Token).ConfigureAwait(false);
-                break;
-            }
-            catch (SocketException)
-            {
-                ++errorCount;
-                if (errorCount == 5)
-                    throw new TimeoutException();
-                await Task.Delay(1000).ConfigureAwait(false);
-            }
+            await client.ConnectAsync(endpoint, connectionToken.Token).ConfigureAwait(false);
+        }
+        catch (SocketException)
+        {
+            throw new TimeoutException();
         }
 
         await client.SendAsync(BitConverter.GetBytes(_controllerServiceConstructors.Count), SocketFlags.None, token).ConfigureAwait(false);
