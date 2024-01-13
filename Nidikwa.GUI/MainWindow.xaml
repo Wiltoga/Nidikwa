@@ -10,6 +10,8 @@
         Title="Nidikwa"
         Height="500"
         Width="900"
+        MinWidth="600"
+        MinHeight="350"
         Loaded="Window_Loaded"
         FontFamily="{StaticResource Montserrat}"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
@@ -63,7 +65,7 @@
                 Grid.Row="0"
                 Style="{StaticResource Action}"
                 VerticalAlignment="Center"
-                Click="Button_Click">
+                Click="StartStopButton_Click">
                 <StackPanel
                     Orientation="Horizontal">
                     <local:AltImage
@@ -119,7 +121,7 @@
                 Margin="20,0,20,20"
                 Grid.Row="1"
                 VerticalAlignment="Center"
-                Click="Button_Click_1">
+                Click="SaveButton_Click">
                 <Button.Style>
                     <Style
                         TargetType="Button"
@@ -295,6 +297,7 @@
                                     VerticalAlignment="Center"
                                     Padding="2"
                                     Margin="5,0"
+                                    Click="DeleteRecordButton_Click"
                                     Background="{DynamicResource MainRed}"
                                     Style="{StaticResource Action}">
                                     <local:AltImage
@@ -303,6 +306,7 @@
                                         AltMode="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}" />
                                 </Button>
                                 <Button
+                                    Click="OpenEditorButton_Click"
                                     Margin="5,0"
                                     Style="{StaticResource Followup}">
                                     <StackPanel

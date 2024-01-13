@@ -1,4 +1,6 @@
-﻿using Nidikwa.GUI.ViewModels;
+﻿using Nidikwa.Common;
+using Nidikwa.GUI.ViewModels;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,14 +33,30 @@ namespace Nidikwa.GUI
             ]);
         }
 
-        private async void Button_Click(object sender, RoutedEventArgs e)
+        private async void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
             await ViewModel.StartStopRecordAsync();
         }
 
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        private async void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             await ViewModel.AddQueueAsync();
+        }
+
+        private void DeleteRecordButton_Click(object sender, RoutedEventArgs e)
+        {
+            var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
+            if (record is null)
+                return;
+            File.Delete(record.File);
+        }
+
+        private void OpenEditorButton_Click(object sender, RoutedEventArgs e)
+        {
+            var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
+            if (record is null)
+                return;
+            new RecordEditionWindow(record).ShowDialog();
         }
     }
 }
