@@ -34,6 +34,17 @@
                             Offset="1.0" />
                     </LinearGradientBrush>
                     <LinearGradientBrush
+                        x:Key="MainRed"
+                        StartPoint="0,0"
+                        EndPoint="1,1">
+                        <GradientStop
+                            Color="#FFF93662"
+                            Offset="0.0" />
+                        <GradientStop
+                            Color="Maroon"
+                            Offset="1.0" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush
                         x:Key="MainColorDarker"
                         StartPoint="0,0"
                         EndPoint="1,1">

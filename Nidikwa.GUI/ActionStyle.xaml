@@ -7,8 +7,14 @@
             Property="Cursor"
             Value="Hand" />
         <Setter
+            Property="Padding"
+            Value="22,8" />
+        <Setter
             Property="Foreground"
             Value="{DynamicResource MainColorSolid}" />
+        <Setter
+            Property="Background"
+            Value="{DynamicResource MainColor}" />
         <Setter
             Property="Template">
             <Setter.Value>
@@ -18,16 +24,16 @@
                         <Border
                             Name="border"
                             Background="{DynamicResource BackColorSolid}"
-                            Padding="20,8"
                             BorderThickness="2"
-                            BorderBrush="{DynamicResource MainColor}"
+                            BorderBrush="{TemplateBinding Background}"
                             CornerRadius="4">
                         </Border>
                         <Border
                             Name="content"
-                            Padding="22,10"
+                            Padding="{TemplateBinding Padding}"
                             CornerRadius="4">
                             <ContentPresenter
+                                Margin="2"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                 Content="{TemplateBinding Content}" />
@@ -40,7 +46,7 @@
                             <Setter
                                 TargetName="content"
                                 Property="Background"
-                                Value="{DynamicResource MainColor}" />
+                                Value="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Background}" />
                         </Trigger>
                         <Trigger
                             Property="IsPressed"
@@ -48,11 +54,7 @@
                             <Setter
                                 TargetName="content"
                                 Property="Background"
-                                Value="{DynamicResource MainColorDarker}" />
-                            <Setter
-                                TargetName="border"
-                                Property="BorderBrush"
-                                Value="{DynamicResource MainColorDarker}" />
+                                Value="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Background}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

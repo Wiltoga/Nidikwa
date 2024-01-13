@@ -21,6 +21,8 @@
     <None Remove="assets\start-record.png" />
     <None Remove="assets\stop-record-alt.png" />
     <None Remove="assets\stop-record.png" />
+    <None Remove="assets\trash-alt.png" />
+    <None Remove="assets\trash.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +41,8 @@
     <Resource Include="assets\input-device.png" />
     <Resource Include="assets\output-device-alt.png" />
     <Resource Include="assets\output-device.png" />
+    <Resource Include="assets\trash-alt.png" />
+    <Resource Include="assets\trash.png" />
     <Resource Include="Fonts\Montserrat-Medium.ttf" />
     <Resource Include="assets\start-record-alt.png" />
     <Resource Include="assets\start-record.png" />

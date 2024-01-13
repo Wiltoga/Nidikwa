@@ -3,10 +3,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:common="clr-namespace:Nidikwa.Common;assembly=Nidikwa.Common"
         xmlns:local="clr-namespace:Nidikwa.GUI"
         xmlns:vm="clr-namespace:Nidikwa.GUI.ViewModels"
-        xmlns:model="clr-namespace:Nidikwa.Models;assembly=Nidikwa.Models"
-        xmlns:common="clr-namespace:Nidikwa.Common;assembly=Nidikwa.Common"
         mc:Ignorable="d"
         Title="Nidikwa"
         Height="500"
@@ -292,6 +291,19 @@
                             <DockPanel
                                 Margin="10,5">
                                 <Button
+                                    ToolTip="Delete this recording"
+                                    VerticalAlignment="Center"
+                                    Padding="2"
+                                    Margin="5,0"
+                                    Background="{DynamicResource MainRed}"
+                                    Style="{StaticResource Action}">
+                                    <local:AltImage
+                                        Source="/assets/trash.png"
+                                        AltSource="/assets/trash-alt.png"
+                                        AltMode="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}" />
+                                </Button>
+                                <Button
+                                    Margin="5,0"
                                     Style="{StaticResource Followup}">
                                     <StackPanel
                                         Orientation="Horizontal">
