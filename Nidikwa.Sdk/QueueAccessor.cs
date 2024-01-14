@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using Nidikwa.Common;
+﻿using Nidikwa.Common;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
 

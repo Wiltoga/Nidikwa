@@ -48,6 +48,20 @@ public class Editor : IDisposable
 
         DeviceSessions = devices;
 
+        HighestSample = new();
+
+        foreach (var device in devices)
+        {
+            float max = 0;
+            foreach (var sample in device.Value.Samples.Span)
+            {
+                var abs = Math.Abs(sample);
+                if (abs > max)
+                    max = abs;
+            }
+            HighestSample[device.Key] = max;
+        }
+
         Mixer = new MixingWaveProvider32(DeviceSessions.Values.Select(session => session.Output));
 
         Scope = new TimeScopeWaveProvider(Mixer);
@@ -76,6 +90,7 @@ public class Editor : IDisposable
     private string PlaybackDevice { get; }
     private IWavePlayer? Player { get; set; }
     private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
+    private Dictionary<string, float> HighestSample { get; }
     private MixingWaveProvider32 Mixer { get; }
     private TimeScopeWaveProvider Scope { get; }
     private VolumeSampleProvider Volume { get; }
@@ -86,6 +101,7 @@ public class Editor : IDisposable
     public float MasterVolume { get => Volume.Volume; set => Volume.Volume = value; }
 
     public float GetSessionVolume(string sessionId) => DeviceSessions[sessionId].Volume.Volume;
+    public float GetSessionHighestSample(string sessionId) => HighestSample[sessionId];
     public float SetSessionVolume(string sessionId, float volume) => DeviceSessions[sessionId].Volume.Volume = volume;
 
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
