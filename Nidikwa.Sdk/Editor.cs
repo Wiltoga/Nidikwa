@@ -18,14 +18,15 @@ public class Editor : IDisposable
         {
             RawStream = new RawSourceWaveStream(source, format);
 
-            var asSamples = RawStream.ToSampleProvider();
+            var monoFormat = WaveFormat.CreateIeeeFloatWaveFormat(RawStream.WaveFormat.SampleRate, 1);
+            var asMonoSamples = new MediaFoundationResampler(RawStream, monoFormat).ToSampleProvider();
             RawStream.Seek(0, SeekOrigin.Begin);
             var samples = new float[RawStream.Length / (RawStream.WaveFormat.BitsPerSample / 8)];
-            asSamples.Read(samples, 0, samples.Length);
+            asMonoSamples.Read(samples, 0, samples.Length);
             Samples = samples;
             RawStream.Seek(0, SeekOrigin.Begin);
 
-            Volume = new VolumeSampleProvider(asSamples);
+            Volume = new VolumeSampleProvider(RawStream.ToSampleProvider());
 
             Output = Volume.ToWaveProvider();
         }

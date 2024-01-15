@@ -1,4 +1,5 @@
 ﻿using Nidikwa.Common;
+using Nidikwa.GUI.ViewModels;
 using Nidikwa.Sdk;
 using System.Windows;
 
@@ -9,8 +10,8 @@ namespace Nidikwa.GUI
     /// </summary>
     public partial class RecordEditionWindow : Window
     {
-        public Editor Editor { get; private set; } = default!;
         public RecordSessionFile Session { get; }
+        internal EditorViewModel ViewModel { get; private set; } = default!;
 
         public RecordEditionWindow(RecordSessionFile session)
         {
@@ -21,14 +22,14 @@ namespace Nidikwa.GUI
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            Editor.Dispose();
+            ViewModel.Destroy();
         }
 
         protected override async void OnInitialized(EventArgs e)
         {
             base.OnInitialized(e);
             var defaultDevice = await DevicesAccessor.GetDefaultOutputDeviceAsync();
-            Editor = await Editor.CreateAsync(Session, defaultDevice.Id);
+            ViewModel = new EditorViewModel(await Editor.CreateAsync(Session, defaultDevice.Id));
         }
     }
 }
