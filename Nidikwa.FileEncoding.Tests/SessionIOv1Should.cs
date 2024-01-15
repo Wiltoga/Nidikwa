@@ -42,6 +42,35 @@ public class SessionIOv1Should
     }
 
     [TestMethod]
+    public async Task CorrectlyCalculateStreamedLength()
+    {
+        List<string> tmpFiles = new();
+        try
+        {
+            var fileSession = new RecordSessionAsFile(mockSession.Metadata, mockSession.DeviceSessions.ToArray().Select(session =>
+            {
+                string temp = Path.GetTempFileName();
+                File.WriteAllBytes(temp, session.WaveData.ToArray());
+                tmpFiles.Add(temp);
+                return new DeviceSessionAsFile(session.Device, temp);
+            }).ToArray());
+
+            var computedSize = await encoder.GetStreamedSizeAsync(fileSession, version);
+            MemoryStream stream = new();
+            await encoder.StreamSessionAsync(fileSession, stream, true, version);
+            Assert.AreEqual(computedSize, stream.Length);
+        }
+        finally
+        {
+            foreach (var file in tmpFiles)
+            {
+                if (File.Exists(file))
+                    File.Delete(file);
+            }
+        }
+    }
+
+    [TestMethod]
     public async Task CorrectlyEncodeSession()
     {
         var stream = new MemoryStream();

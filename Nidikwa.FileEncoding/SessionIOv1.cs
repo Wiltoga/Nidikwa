@@ -174,4 +174,36 @@ internal class SessionIOv1 : ISessionIO
 
         #endregion devices listing
     }
+
+    public async Task<int> GetStreamedSizeAsync(RecordSessionAsFile recordSession, CancellationToken cancellationToken)
+    {
+        int metadataSize =
+            16 // Id
+            + 8 // Date
+            + 8 // Duration
+            + 4; // Sessions count
+        foreach (var deviceSession in recordSession.DeviceSessions.ToArray())
+        {
+            metadataSize +=
+                4 // Device id length
+                + Encoding.UTF8.GetBytes(deviceSession.Device.Id).Length // Device id
+                + 4 // Device name length
+                + Encoding.UTF8.GetBytes(deviceSession.Device.Name).Length // Device name
+                + 1 // device type
+                + 4 // raw data length
+                ;
+        }
+
+        int dataSize = 0;
+
+        dataSize += (await Task.WhenAll(recordSession.DeviceSessions.ToArray().Select(deviceSession => Task.Run(() =>
+        {
+            using (var stream = new FileStream(deviceSession.TempFile, FileMode.Open, FileAccess.Read))
+            {
+                return (int)stream.Length; // data length
+            }
+        })))).Sum();
+
+        return metadataSize + dataSize;
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using Nidikwa.Models;
+using System.IO;
 using System.Text;
 
 namespace Nidikwa.FileEncoding;
@@ -14,6 +15,33 @@ public class SessionEncoder
                       where type.GetInterfaces().Contains(typeof(ISessionIO)) && type.GetConstructor(Array.Empty<Type>()) is not null
                       select type.GetConstructor(Array.Empty<Type>())!.Invoke(null) as ISessionIO)
             .ToArray();
+    }
+
+    public async Task<int> GetStreamedSizeAsync(RecordSessionAsFile session, ushort? version = null, CancellationToken cancellationToken = default)
+    {
+        ISessionIO? sessionIO = null;
+        if (version is null)
+        {
+            sessionIO = SessionIOs.Aggregate((acc, current) =>
+            {
+                return current.FileVersion > acc.FileVersion
+                    ? current
+                    : acc;
+            });
+        }
+        else
+        {
+            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
+        }
+
+        if (sessionIO is null)
+            throw new ArgumentException("Version not supported");
+
+        var fileSize = await sessionIO.GetStreamedSizeAsync(session, cancellationToken);
+        fileSize +=
+            Encoding.ASCII.GetBytes(fileType).Length // signature
+            + 2; // file version
+        return fileSize;
     }
 
     public async Task<RecordSessionMetadata> ParseMetadataAsync(Stream stream, ushort? desiredVersion = null, CancellationToken cancellationToken = default)
@@ -56,6 +84,42 @@ public class SessionEncoder
         return await validReader.ReadSessionAsync(stream, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task StreamSessionAsync(RecordSessionAsFile session, Stream stream, bool autoDeleteFiles, ushort? version = null, CancellationToken cancellationToken = default)
+    {
+        ISessionIO? sessionIO = null;
+        if (version is null)
+        {
+            sessionIO = SessionIOs.Aggregate((acc, current) =>
+            {
+                return current.FileVersion > acc.FileVersion
+                    ? current
+                    : acc;
+            });
+        }
+        else
+        {
+            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
+        }
+
+        if (sessionIO is null)
+            throw new ArgumentException("Version not supported");
+
+        var signatureBytes = Encoding.ASCII.GetBytes(fileType);
+        var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
+        await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
+        await sessionIO.StreamSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
+        if (autoDeleteFiles)
+        {
+            foreach (var deviceSession in session.DeviceSessions.ToArray())
+            {
+                if (File.Exists(deviceSession.TempFile))
+                {
+                    File.Delete(deviceSession.TempFile);
+                }
+            }
+        }
+    }
+
     public async Task WriteSessionAsync(RecordSession session, Stream stream, ushort? version = null, CancellationToken cancellationToken = default)
     {
         ISessionIO? sessionIO = null;
@@ -80,31 +144,5 @@ public class SessionEncoder
         var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
         await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
         await sessionIO.WriteSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task StreamSessionAsync(RecordSessionAsFile session, Stream stream, ushort? version = null, CancellationToken cancellationToken = default)
-    {
-        ISessionIO? sessionIO = null;
-        if (version is null)
-        {
-            sessionIO = SessionIOs.Aggregate((acc, current) =>
-            {
-                return current.FileVersion > acc.FileVersion
-                    ? current
-                    : acc;
-            });
-        }
-        else
-        {
-            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
-        }
-
-        if (sessionIO is null)
-            throw new ArgumentException("Version not supported");
-
-            var signatureBytes = Encoding.ASCII.GetBytes(fileType);
-            var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
-            await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
-            await sessionIO.StreamSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using CommunityToolkit.HighPerformance;
+using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 
 namespace Nidikwa.FileEncoding;
 
@@ -7,35 +9,22 @@ namespace Nidikwa.FileEncoding;
 /// </summary>
 public class EchoStream : Stream
 {
-    public override bool CanTimeout { get; } = true;
-    public override int ReadTimeout { get; set; } = Timeout.Infinite;
-    public override int WriteTimeout { get; set; } = Timeout.Infinite;
-    public override bool CanRead { get; } = true;
-    public override bool CanSeek { get; } = false;
-    public override bool CanWrite { get; } = true;
-
-    public bool CopyBufferOnWrite { get; set; } = false;
+    // Default underlying mechanism for BlockingCollection is ConcurrentQueue<T>, which is what we want
+    private readonly BlockingCollection<ReadOnlyMemory<byte>> _Buffers;
 
     private readonly object _lock = new object();
-
-    // Default underlying mechanism for BlockingCollection is ConcurrentQueue<T>, which is what we want
-    private readonly BlockingCollection<byte[]> _Buffers;
+    private long _Length = 0L;
     private int _maxQueueDepth = 10;
-
-    private byte[]? m_buffer = null;
-    private int m_offset = 0;
-    private int m_count = 0;
-
+    private long _Position = 0L;
+    private ReadOnlyMemory<byte> m_buffer;
     private bool m_Closed = false;
-    private bool m_FinalZero = false; //after the stream is closed, set to true after returning a 0 for read()
-    public override void Close()
-    {
-        m_Closed = true;
-
-        // release any waiting writes
-        _Buffers.CompleteAdding();
-    }
-
+    private int m_count = 0;
+    private bool m_FinalZero = false;
+    private int m_offset = 0;
+    public override bool CanRead { get; } = true;
+    public override bool CanSeek { get; } = false;
+    public override bool CanTimeout { get; } = true;
+    public override bool CanWrite { get; } = true;
     public bool DataAvailable
     {
         get
@@ -44,7 +33,6 @@ public class EchoStream : Stream
         }
     }
 
-    private long _Length = 0L;
     public override long Length
     {
         get
@@ -53,7 +41,6 @@ public class EchoStream : Stream
         }
     }
 
-    private long _Position = 0L;
     public override long Position
     {
         get
@@ -66,22 +53,40 @@ public class EchoStream : Stream
         }
     }
 
-    public EchoStream() : this(0)
+    public override int ReadTimeout { get; set; } = Timeout.Infinite;
+    public override int WriteTimeout { get; set; } = Timeout.Infinite;
+
+    public EchoStream() : this(5)
     {
     }
 
     public EchoStream(int maxQueueDepth)
     {
         _maxQueueDepth = maxQueueDepth;
-        _Buffers = maxQueueDepth == 0
-            ? new BlockingCollection<byte[]>()
-            : new BlockingCollection<byte[]>(_maxQueueDepth);
+        _Buffers =  new BlockingCollection<ReadOnlyMemory<byte>>(_maxQueueDepth);
     }
 
-    // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-    public new Task WriteAsync(byte[] buffer, int offset, int count)
+    //after the stream is closed, set to true after returning a 0 for read()
+    public override void Close()
     {
-        return Task.Run(() => Write(buffer, offset, count));
+        m_Closed = true;
+
+        // release any waiting writes
+        _Buffers.CompleteAdding();
+    }
+
+    public override void Flush()
+    {
+    }
+
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        return Read(buffer.AsSpan().Slice(offset, count));
+    }
+
+    public override int Read(Span<byte> buffer)
+    {
+        return Read(buffer, default);
     }
 
     // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
@@ -93,27 +98,65 @@ public class EchoStream : Stream
         });
     }
 
-    public override void Write(byte[] buffer, int offset, int count)
+    public override int ReadByte()
     {
-        if (m_Closed || buffer.Length - offset < count || count <= 0)
-            return;
-
-        byte[] newBuffer;
-        if (!CopyBufferOnWrite && offset == 0 && count == buffer.Length)
-            newBuffer = buffer;
-        else
-        {
-            newBuffer = new byte[count];
-            System.Buffer.BlockCopy(buffer, offset, newBuffer, 0, count);
-        }
-        if (!_Buffers.TryAdd(newBuffer, WriteTimeout))
-            throw new TimeoutException("EchoStream Write() Timeout");
-
-        _Length += count;
+        byte[] returnValue = new byte[1];
+        return (Read(returnValue, 0, 1) <= 0 ? -1 : (int)returnValue[0]);
     }
 
-    public override int Read(byte[] buffer, int offset, int count)
+    public override long Seek(long offset, SeekOrigin origin)
     {
+        throw new NotImplementedException();
+    }
+
+    public override void SetLength(long value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        Write(buffer.AsSpan().Slice(offset, count));
+    }
+
+    public new Task WriteAsync(byte[] buffer, int offset, int count)
+    {
+        return WriteAsync(buffer, offset, count, default);
+    }
+
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        Write(buffer, default);
+    }
+
+    private void Write(ReadOnlySpan<byte> buffer, CancellationToken token)
+    {
+        if (m_Closed || buffer.Length <= 0)
+            return;
+
+        Memory<byte> newBuffer = new byte[buffer.Length];
+        buffer.CopyTo(newBuffer.Span);
+
+        if (!_Buffers.TryAdd(newBuffer, WriteTimeout, token))
+            throw new TimeoutException("EchoStream Write() Timeout or Canceled");
+
+        _Length += buffer.Length;
+    }
+
+    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        await WriteAsync(buffer.AsMemory().Slice(offset, count), cancellationToken);
+    }
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Write(buffer.Span, cancellationToken), cancellationToken);
+    }
+
+    private int Read(Span<byte> buffer, CancellationToken cancellationToken)
+    {
+        var count = buffer.Length;
+        var offset = 0;
         if (count == 0)
             return 0;
         lock (_lock)
@@ -133,7 +176,7 @@ public class EchoStream : Stream
                     }
                 }
 
-                if (_Buffers.TryTake(out m_buffer, ReadTimeout))
+                if (_Buffers.TryTake(out m_buffer, ReadTimeout, cancellationToken))
                 {
                     m_offset = 0;
                     m_count = m_buffer.Length;
@@ -164,7 +207,7 @@ public class EchoStream : Stream
             {
                 if (m_count == 0)
                 {
-                    if (_Buffers.TryTake(out m_buffer, 0))
+                    if (_Buffers.TryTake(out m_buffer, 0, cancellationToken))
                     {
                         m_offset = 0;
                         m_count = m_buffer.Length;
@@ -174,7 +217,7 @@ public class EchoStream : Stream
                 }
 
                 var bytesToCopy = (count < m_count) ? count : m_count;
-                System.Buffer.BlockCopy(m_buffer, m_offset, buffer, offset, bytesToCopy);
+                m_buffer.Slice(m_offset, bytesToCopy).Span.CopyTo(buffer[offset..]);
                 m_offset += bytesToCopy;
                 m_count -= bytesToCopy;
                 offset += bytesToCopy;
@@ -189,23 +232,13 @@ public class EchoStream : Stream
         }
     }
 
-    public override int ReadByte()
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        byte[] returnValue = new byte[1];
-        return (Read(returnValue, 0, 1) <= 0 ? -1 : (int)returnValue[0]);
+        return await ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
     }
 
-    public override void Flush()
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-    }
-
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override void SetLength(long value)
-    {
-        throw new NotImplementedException();
+        return await Task.Run(() => Read(buffer.Span, cancellationToken), cancellationToken);
     }
 }

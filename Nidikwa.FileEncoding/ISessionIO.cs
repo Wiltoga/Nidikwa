@@ -12,5 +12,7 @@ internal interface ISessionIO
 
     Task WriteSessionAsync(RecordSession recordSession, Stream stream, CancellationToken cancellationToken);
 
+    Task<int> GetStreamedSizeAsync(RecordSessionAsFile recordSession, CancellationToken cancellationToken);
+
     Task StreamSessionAsync(RecordSessionAsFile recordSession, Stream stream, CancellationToken cancellationToken);
 }

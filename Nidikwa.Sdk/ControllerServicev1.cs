@@ -152,9 +152,9 @@ internal class ControllerServicev1 : IControllerService
             var responseBytes = new byte[BitConverter.ToInt32(responseLengthBytes)];
             await client.ReceiveAsync(responseBytes, SocketFlags.None, token).ConfigureAwait(false);
             result = JsonConvert.DeserializeObject<ContentResult>(Encoding.UTF8.GetString(responseBytes), serializerSettings);
-            var content = new NetworkStream(client);
+            var content = new NetworkStream(client, FileAccess.Read, false);
             result ??= new ContentResult { Code = ResultCodes.NoResponse };
-            result.AdditionnalContent = content;
+            result.SetContent(content, result.ContentLength);
         }
         catch (TimeoutException)
         {
@@ -169,7 +169,7 @@ internal class ControllerServicev1 : IControllerService
 
     private class StreamSaver : Stream
     {
-        private MemoryStream ReadData;
+        private readonly MemoryStream ReadData;
 
         public override bool CanRead => true;
 

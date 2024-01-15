@@ -7,7 +7,12 @@ internal partial class Controller
     private static Result Success() => new Result { Code = ResultCodes.Success };
 
     private static Result<T> Success<T>(T data) => new Result<T> { Code = ResultCodes.Success, Data = data };
-    private static ContentResult Success(Stream data) => new ContentResult { Code = ResultCodes.Success, AdditionnalContent = data };
+    private static ContentResult Success(Stream data, int length)
+    {
+        var result = new ContentResult { Code = ResultCodes.Success };
+        result.SetContent(data, length);
+        return result;
+    } 
 
     private static Result NotFound(string? message = null) => new Result { Code = ResultCodes.NotFound, ErrorMessage = message };
 

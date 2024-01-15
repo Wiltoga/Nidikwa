@@ -1,7 +1,5 @@
 ﻿using Nidikwa.Common;
 using Nidikwa.Models;
-using System.IO;
-using System.Net.Sockets;
 
 namespace Nidikwa.Service.Controllerv1;
 
@@ -37,7 +35,8 @@ internal partial class Controller
     [Endpoint(RouteEndpoints.SaveAsNdkw)]
     public async Task<ContentResult> SaveAsNdkw()
     {
-        return Success(await audioService.SaveAsNdkwAsync());
+        var result = await audioService.SaveAsNdkwAsync();
+        return Success(result.Stream, result.ComputedSize);
     }
 
     [Endpoint(RouteEndpoints.GetStatus)]

@@ -156,7 +156,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
     }
 
-    public async Task<Stream> SaveAsNdkwAsync()
+    public async Task<(Stream Stream, int ComputedSize)> SaveAsNdkwAsync()
     {
         logger.LogInformation("Save as NDKW");
         var (sessionsData, duration) = await Locked(async () =>
@@ -192,7 +192,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
             return (sessionsData, duration);
         });
-        
+
         var deviceSessions = sessionsData.Select(sessionData => new DeviceSessionAsFile(MapDevice(sessionData.MmDevice), sessionData.tempFile)).ToArray();
 
         var resultFile = new RecordSessionAsFile(
@@ -205,9 +205,10 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         );
 
         var encoder = new SessionEncoder();
-        var stream = new EchoStream();
-        _ = encoder.StreamSessionAsync(resultFile, stream);
-        return stream;
+        var stream = new EchoStream(5);
+        var computedSize = await encoder.GetStreamedSizeAsync(resultFile);
+        _ = encoder.StreamSessionAsync(resultFile, stream, true).ContinueWith(_ => stream.Close());
+        return (stream, computedSize);
     }
 
     public Task StartRecordAsync(RecordParams args)
