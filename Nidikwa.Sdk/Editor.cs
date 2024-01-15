@@ -4,6 +4,7 @@ using NAudio.Wave.SampleProviders;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
 using Nidikwa.Common;
+using CommunityToolkit.HighPerformance;
 
 namespace Nidikwa.Sdk;
 

@@ -81,4 +81,30 @@ public class SessionEncoder
         await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
         await sessionIO.WriteSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task StreamSessionAsync(RecordSessionAsFile session, Stream stream, ushort? version = null, CancellationToken cancellationToken = default)
+    {
+        ISessionIO? sessionIO = null;
+        if (version is null)
+        {
+            sessionIO = SessionIOs.Aggregate((acc, current) =>
+            {
+                return current.FileVersion > acc.FileVersion
+                    ? current
+                    : acc;
+            });
+        }
+        else
+        {
+            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
+        }
+
+        if (sessionIO is null)
+            throw new ArgumentException("Version not supported");
+
+            var signatureBytes = Encoding.ASCII.GetBytes(fileType);
+            var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
+            await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
+            await sessionIO.StreamSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
+    }
 }

@@ -91,12 +91,6 @@ internal sealed partial class Controller : IController
         await stream.WriteAsync(resultBytes);
     }
 
-    private async Task WriteContentAsync(ReadOnlyMemory<byte> content, Stream stream)
-    {
-        await stream.WriteAsync(BitConverter.GetBytes(content.Length));
-        await stream.WriteAsync(content);
-    }
-
     public async Task HandleRequestAsync(string input, Stream stream)
     {
         string enpointName;
@@ -141,9 +135,9 @@ internal sealed partial class Controller : IController
             var response = JsonConvert.SerializeObject(result, serializerSettings);
             logger.LogInformation("Response : '{response}'", response);
             await WriteStringAsync(response, stream);
-            if (result is ContentResult contentResult)
+            if (result is ContentResult contentResult && contentResult.AdditionnalContent is not null)
             {
-                await WriteContentAsync(contentResult.AdditionnalContent, stream);
+                await contentResult.AdditionnalContent.CopyToAsync(stream);
             }
         }
         else

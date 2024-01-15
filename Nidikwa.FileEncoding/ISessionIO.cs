@@ -11,4 +11,6 @@ internal interface ISessionIO
     Task<RecordSession> ReadSessionAsync(Stream stream, CancellationToken cancellationToken);
 
     Task WriteSessionAsync(RecordSession recordSession, Stream stream, CancellationToken cancellationToken);
+
+    Task StreamSessionAsync(RecordSessionAsFile recordSession, Stream stream, CancellationToken cancellationToken);
 }

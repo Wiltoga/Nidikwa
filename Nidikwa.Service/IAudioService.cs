@@ -18,5 +18,5 @@ internal interface IAudioService
 
     Task StopRecordAsync();
 
-    Task<ReadOnlyMemory<byte>> SaveAsNdkwAsync();
+    Task<Stream> SaveAsNdkwAsync();
 }

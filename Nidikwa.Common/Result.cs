@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
 
 namespace Nidikwa.Common;
 
@@ -25,8 +25,9 @@ public class Result<T> : Result
 {
     public T? Data { get; init; }
 }
+
 public class ContentResult : Result
 {
     [JsonIgnore]
-    public ReadOnlyMemory<byte> AdditionnalContent { get; set; }
+    public Stream? AdditionnalContent { get; set; }
 }
