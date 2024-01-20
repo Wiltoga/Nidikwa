@@ -3,15 +3,121 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:Nidikwa.Models;assembly=Nidikwa.Models"
         xmlns:local="clr-namespace:Nidikwa.GUI"
+        xmlns:vm="clr-namespace:Nidikwa.GUI.ViewModels"
         mc:Ignorable="d"
         Title="Nidikwa"
-        Height="500"
-        Width="900"
+        Height="700"
+        Width="1400"
+        WindowState="Maximized"
         MinWidth="600"
         MinHeight="350"
-        FontFamily="{StaticResource Montserrat}">
+        FontFamily="{StaticResource Montserrat}"
+        d:DataContext="{d:DesignInstance Type=vm:EditorViewModel}">
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition
+                Height="auto"/>
+            <RowDefinition
+                Height="*"/>
+            <RowDefinition
+                Height="auto"/>
+        </Grid.RowDefinitions>
+        <ScrollViewer
+            Grid.Row="1"
+            VerticalScrollBarVisibility="Auto"
+            HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl
+                ItemsSource="{Binding Path=Tracks}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel
+                            Orientation="Vertical" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate
+                        DataType="vm:TrackViewModel">
+                        <Grid
+                            Height="200">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition
+                                    Width="250" />
+                                <ColumnDefinition
+                                    Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition
+                                    Height="auto" />
+                                <RowDefinition
+                                    Height="*" />
+                            </Grid.RowDefinitions>
+                            <Border
+                                Grid.RowSpan="2"
+                                BorderBrush="LightGray"
+                                BorderThickness="1" />
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <Image
+                                    Stretch="None"
+                                    Source="/assets/output-device.png">
+                                    <Image.Style>
+                                        <Style
+                                            TargetType="Image">
+                                            <Style.Triggers>
+                                                <DataTrigger
+                                                    Binding="{Binding Path=Session.Device.Type}"
+                                                    Value="{x:Static models:DeviceType.Input}">
+                                                    <Setter
+                                                        Property="Visibility"
+                                                        Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                                <Image
+                                    Stretch="None"
+                                    Source="/assets/input-device.png">
+                                    <Image.Style>
+                                        <Style
+                                            TargetType="Image">
+                                            <Style.Triggers>
+                                                <DataTrigger
+                                                    Binding="{Binding Path=Session.Device.Type}"
+                                                    Value="{x:Static models:DeviceType.Output}">
+                                                    <Setter
+                                                        Property="Visibility"
+                                                        Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                                <TextBlock
+                                    Margin="5"
+                                    Text="{Binding Path=Session.Device.Name}" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Row="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="5"
+                                VerticalAlignment="Center">
+                                <TextBlock>
+                                    Volume :
+                                </TextBlock>
+                                <TextBox
+                                    PreviewTextInput="NumberTextBox_PreviewTextInput"
+                                    Margin="5,0"
+                                    Text="{Binding Path=Volume, Converter={StaticResource VolumeConverter}}"
+                                    MinWidth="50" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </Window>

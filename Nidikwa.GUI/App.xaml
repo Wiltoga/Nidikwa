@@ -65,6 +65,8 @@
                     Source="FollowupStyle.xaml" />
                 <ResourceDictionary
                     Source="SliderStyle.xaml" />
+                <ResourceDictionary
+                    Source="Converters.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
