@@ -171,8 +171,8 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 {
                     recording.Paused = true;
                 }
-                duration ??= TimeSpan.FromSeconds(recording.Cache.Length / (double)recording.Capture.WaveFormat.AverageBytesPerSecond);
                 recording.Buffer.Flush();
+                duration ??= TimeSpan.FromSeconds(recording.Cache.Length / (double)recording.Capture.WaveFormat.AverageBytesPerSecond);
                 var tempFile = Path.GetTempFileName();
 
                 recording.Cache.Seek(0, SeekOrigin.Begin);
