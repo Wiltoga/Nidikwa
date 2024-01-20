@@ -179,13 +179,14 @@ public class Editor : IDisposable
         }).ConfigureAwait(false);
     }
 
-    public async Task<Dictionary<string, float[]>> GetAverageSamplesBetweenAsync(TimeSpan start, TimeSpan end, int samplesCount, CancellationToken token)
+    public Task<float[]> GetAverageSamplesBetweenAsync(TimeSpan start, TimeSpan end, int samplesCount, string sessionId, CancellationToken token)
     {
         var maxScopeTime = TimeSpan.FromSeconds(.1);
-        return new Dictionary<string, float[]>(await Task.WhenAll(DeviceSessions.Select(deviceSession => Task.Run(() =>
+        var deviceSession = DeviceSessions[sessionId];
+        return Task.Run(() =>
         {
-            var startOffset = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)start.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
-            var endOffset = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)end.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
+            var startOffset = deviceSession.RawStream.WaveFormat.ConvertLatencyToByteSize((int)start.TotalMilliseconds) / (deviceSession.RawStream.WaveFormat.BitsPerSample / 8);
+            var endOffset = deviceSession.RawStream.WaveFormat.ConvertLatencyToByteSize((int)end.TotalMilliseconds) / (deviceSession.RawStream.WaveFormat.BitsPerSample / 8);
 
             var samplesDuration = endOffset - startOffset;
             if (samplesDuration < samplesCount)
@@ -194,7 +195,7 @@ public class Editor : IDisposable
             // distance in sample count between each average sample calculation
             var samplesDelta = (int)Math.Ceiling((float)samplesDuration / samplesCount);
             // max possible range of samples for the average calculation
-            var maxScopeSamples = deviceSession.Value.RawStream.WaveFormat.ConvertLatencyToByteSize((int)maxScopeTime.TotalMilliseconds) / (deviceSession.Value.RawStream.WaveFormat.BitsPerSample / 8);
+            var maxScopeSamples = deviceSession.RawStream.WaveFormat.ConvertLatencyToByteSize((int)maxScopeTime.TotalMilliseconds) / (deviceSession.RawStream.WaveFormat.BitsPerSample / 8);
 
             // actual amount of real samples used to compute one average sample
             var computedScope = Math.Min(samplesDelta, maxScopeSamples);
@@ -205,7 +206,7 @@ public class Editor : IDisposable
             for (int i = 0; i < samplesCount; ++i)
             {
                 token.ThrowIfCancellationRequested();
-                var scope = deviceSession.Value.Samples.Span.Slice(startOffset + (i * samplesDelta), computedScope);
+                var scope = deviceSession.Samples.Span.Slice(startOffset + (i * samplesDelta), computedScope);
                 var max = 0f;
                 var min = 0f;
                 foreach (var sample in scope)
@@ -238,8 +239,8 @@ public class Editor : IDisposable
                 }
             }
 
-            return new KeyValuePair<string, float[]>(deviceSession.Key, resultSamples);
-        }))).ConfigureAwait(false));
+            return resultSamples;
+        });
     }
 
     public float GetSessionHighestSample(string sessionId) => HighestSample[sessionId];
