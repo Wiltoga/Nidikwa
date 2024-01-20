@@ -5,6 +5,7 @@ using Nidikwa.FileEncoding;
 using Nidikwa.Models;
 using Nidikwa.Common;
 using CommunityToolkit.HighPerformance;
+using NAudio.Utils;
 
 namespace Nidikwa.Sdk;
 
@@ -12,35 +13,37 @@ public class Editor : IDisposable
 {
     private static WaveFormat OutputFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
 
-    private class DeviceSessionEdition : IDisposable
-    {
-        public DeviceSessionEdition(Stream source, WaveFormat format)
-        {
-            RawStream = new RawSourceWaveStream(source, format);
+    public TimeSpan End { get => Scope.End; set => Scope.End = value; }
 
-            var monoFormat = WaveFormat.CreateIeeeFloatWaveFormat(RawStream.WaveFormat.SampleRate, 1);
-            var asMonoSamples = new MediaFoundationResampler(RawStream, monoFormat).ToSampleProvider();
-            RawStream.Seek(0, SeekOrigin.Begin);
-            var samples = new float[RawStream.Length / (RawStream.WaveFormat.BitsPerSample / 8)];
-            asMonoSamples.Read(samples, 0, samples.Length);
-            Samples = samples;
-            RawStream.Seek(0, SeekOrigin.Begin);
+    public string File { get; }
 
-            Volume = new VolumeSampleProvider(RawStream.ToSampleProvider());
+    public TimeSpan FullDuration { get; }
 
-            Output = Volume.ToWaveProvider();
-        }
+    public bool IsPlaying { get; private set; }
 
-        public ReadOnlyMemory<float> Samples { get; }
-        public WaveStream RawStream { get; }
-        public VolumeSampleProvider Volume { get; }
-        public IWaveProvider Output { get; }
+    public float MasterVolume { get => Volume.Volume; set => Volume.Volume = value; }
 
-        public void Dispose()
-        {
-            RawStream.Dispose();
-        }
-    }
+    public RecordSession Session { get; }
+
+    public TimeSpan Start { get => Scope.Start; set => Scope.Start = value; }
+
+    private MediaFoundationResampler DeviceResampler { get; }
+
+    private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
+
+    private Dictionary<string, float> HighestSample { get; }
+
+    private MixingWaveProvider32 Mixer { get; }
+
+    private string PlaybackDevice { get; }
+
+    private IWavePlayer? Player { get; set; }
+
+    private CancellationTokenSource? PositionCallbackTokenSource { get; set; }
+
+    private TimeScopeWaveProvider Scope { get; }
+
+    private VolumeSampleProvider Volume { get; }
 
     private Editor(string file, RecordSession session, IDictionary<string, DeviceSessionEdition> devices, string playbackDevice)
     {
@@ -75,37 +78,6 @@ public class Editor : IDisposable
         FullDuration = Scope.End = session.Metadata.TotalDuration;
     }
 
-    private void Player_PlaybackStopped(object? sender, StoppedEventArgs e)
-    {
-        var player = sender as IWavePlayer;
-        if (player is null)
-            return;
-        IsPlaying = false;
-        player.PlaybackStopped -= Player_PlaybackStopped;
-        player.Dispose();
-        Player = null;
-    }
-
-    public string File { get; }
-    public RecordSession Session { get; }
-    public bool IsPlaying { get; private set; }
-    private string PlaybackDevice { get; }
-    private IWavePlayer? Player { get; set; }
-    private IDictionary<string, DeviceSessionEdition> DeviceSessions { get; }
-    private Dictionary<string, float> HighestSample { get; }
-    private MixingWaveProvider32 Mixer { get; }
-    private TimeScopeWaveProvider Scope { get; }
-    private VolumeSampleProvider Volume { get; }
-    private MediaFoundationResampler DeviceResampler { get; }
-    public TimeSpan FullDuration { get; }
-    public TimeSpan Start { get => Scope.Start; set => Scope.Start = value; }
-    public TimeSpan End { get => Scope.End; set => Scope.End = value; }
-    public float MasterVolume { get => Volume.Volume; set => Volume.Volume = value; }
-
-    public float GetSessionVolume(string sessionId) => DeviceSessions[sessionId].Volume.Volume;
-    public float GetSessionHighestSample(string sessionId) => HighestSample[sessionId];
-    public float SetSessionVolume(string sessionId, float volume) => DeviceSessions[sessionId].Volume.Volume = volume;
-
     public static async Task<Editor> CreateAsync(RecordSessionFile sessionFile, string playbackDeviceId, CancellationToken token = default)
     {
         using var stream = new FileStream(sessionFile.File, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -129,56 +101,14 @@ public class Editor : IDisposable
         return new Editor(sessionFile.File, session, new Dictionary<string, DeviceSessionEdition>(devices), playbackDeviceId);
     }
 
-    public void Play()
+    public void Dispose()
     {
-        if (Player is { PlaybackState: PlaybackState.Playing or PlaybackState.Stopped })
-            return;
-
-        IsPlaying = true;
-
-        var device = DevicesAccessor.Enumerator.GetDevice(PlaybackDevice);
-
-        Player = new WasapiOut(device, AudioClientShareMode.Shared, true, 200);
-        Player.Init(DeviceResampler);
-
-        Player.PlaybackStopped += Player_PlaybackStopped;
-
-        Player.Play();
-    }
-
-    public void Pause()
-    {
-        if (Player is null || Player.PlaybackState != PlaybackState.Playing)
-            return;
-
-        Player?.Pause();
-    }
-
-    public void Stop()
-    {
-        if (Player is null || Player.PlaybackState == PlaybackState.Stopped)
-            return;
+        foreach (var session in DeviceSessions.Values)
+        {
+            session.Dispose();
+        }
 
         Player?.Stop();
-        Scope.Reset(TimeSpan.Zero);
-        foreach (var session in DeviceSessions.Values)
-        {
-            session.RawStream.Seek(0, SeekOrigin.Begin);
-        }
-    }
-
-    public void MoveReader(TimeSpan offset)
-    {
-        if (IsPlaying)
-            return;
-
-        foreach (var session in DeviceSessions.Values)
-        {
-            var size = session.RawStream.WaveFormat.ConvertLatencyToByteSize((int)offset.TotalMilliseconds);
-            session.RawStream.Seek(size, SeekOrigin.Begin);
-        }
-        DeviceResampler.Reposition();
-        Scope.Reset(offset);
     }
 
     public async Task ExportAsync(string file, ExportEncoding encoding)
@@ -197,39 +127,51 @@ public class Editor : IDisposable
                 case ExportEncoding.Wav:
                     WaveFileWriter.WriteWavFileToStream(stream, waveProvider);
                     break;
+
                 case ExportEncoding.Mp3_64k:
                     MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 64_000);
                     break;
+
                 case ExportEncoding.Mp3_96k:
                     MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 96_000);
                     break;
+
                 case ExportEncoding.Mp3_128k:
                     MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 128_000);
                     break;
+
                 case ExportEncoding.Mp3_192k:
                     MediaFoundationEncoder.EncodeToMp3(waveProvider, stream, 192_000);
                     break;
+
                 case ExportEncoding.Aac_64k:
                     MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 64_000);
                     break;
+
                 case ExportEncoding.Aac_96k:
                     MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 96_000);
                     break;
+
                 case ExportEncoding.Aac_128k:
                     MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 128_000);
                     break;
+
                 case ExportEncoding.Aac_192k:
                     MediaFoundationEncoder.EncodeToAac(waveProvider, stream, 192_000);
                     break;
+
                 case ExportEncoding.Wma_64k:
                     MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 64_000);
                     break;
+
                 case ExportEncoding.Wma_96k:
                     MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 96_000);
                     break;
+
                 case ExportEncoding.Wma_128k:
                     MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 128_000);
                     break;
+
                 case ExportEncoding.Wma_192k:
                     MediaFoundationEncoder.EncodeToWma(waveProvider, stream, 192_000);
                     break;
@@ -300,13 +242,121 @@ public class Editor : IDisposable
         }))).ConfigureAwait(false));
     }
 
-    public void Dispose()
+    public float GetSessionHighestSample(string sessionId) => HighestSample[sessionId];
+
+    public float GetSessionVolume(string sessionId) => DeviceSessions[sessionId].Volume.Volume;
+
+    public void MoveReader(TimeSpan offset)
     {
+        if (IsPlaying)
+            return;
+
         foreach (var session in DeviceSessions.Values)
         {
-            session.Dispose();
+            var size = session.RawStream.WaveFormat.ConvertLatencyToByteSize((int)offset.TotalMilliseconds);
+            session.RawStream.Seek(size, SeekOrigin.Begin);
         }
+        DeviceResampler.Reposition();
+        Scope.Reset(offset);
+    }
+
+    public void Pause()
+    {
+        if (Player is null || Player.PlaybackState != PlaybackState.Playing)
+            return;
+
+        Player?.Pause();
+    }
+
+    public void Play(Action<TimeSpan>? positionCallback = null)
+    {
+        if (Player is { PlaybackState: PlaybackState.Playing or PlaybackState.Stopped })
+            return;
+
+        IsPlaying = true;
+
+        var device = DevicesAccessor.Enumerator.GetDevice(PlaybackDevice);
+
+        var player = new WasapiOut(device, AudioClientShareMode.Shared, true, 200);
+        Player = player;
+        Player.Init(DeviceResampler);
+
+        Player.PlaybackStopped += Player_PlaybackStopped;
+
+        Player.Play();
+
+        if (positionCallback is not null)
+        {
+            PositionCallbackTokenSource = new();
+            Task.Run(() =>
+            {
+                while (!PositionCallbackTokenSource.Token.IsCancellationRequested)
+                {
+                    positionCallback.Invoke(Scope.Start + player.GetPositionTimeSpan());
+                    Thread.Sleep(10);
+                }
+            });
+        }
+    }
+
+    public float SetSessionVolume(string sessionId, float volume) => DeviceSessions[sessionId].Volume.Volume = volume;
+
+    public void Stop()
+    {
+        if (Player is null || Player.PlaybackState == PlaybackState.Stopped)
+            return;
 
         Player?.Stop();
+        Scope.Reset(TimeSpan.Zero);
+        foreach (var session in DeviceSessions.Values)
+        {
+            session.RawStream.Seek(0, SeekOrigin.Begin);
+        }
+    }
+
+    private void Player_PlaybackStopped(object? sender, StoppedEventArgs e)
+    {
+        PositionCallbackTokenSource?.Cancel();
+        PositionCallbackTokenSource = null;
+        var player = sender as IWavePlayer;
+        if (player is null)
+            return;
+        IsPlaying = false;
+        player.PlaybackStopped -= Player_PlaybackStopped;
+        player.Dispose();
+        Player = null;
+    }
+
+    private class DeviceSessionEdition : IDisposable
+    {
+        public IWaveProvider Output { get; }
+
+        public WaveStream RawStream { get; }
+
+        public ReadOnlyMemory<float> Samples { get; }
+
+        public VolumeSampleProvider Volume { get; }
+
+        public DeviceSessionEdition(Stream source, WaveFormat format)
+        {
+            RawStream = new RawSourceWaveStream(source, format);
+
+            var monoFormat = WaveFormat.CreateIeeeFloatWaveFormat(RawStream.WaveFormat.SampleRate, 1);
+            var asMonoSamples = new MediaFoundationResampler(RawStream, monoFormat).ToSampleProvider();
+            RawStream.Seek(0, SeekOrigin.Begin);
+            var samples = new float[RawStream.Length / (RawStream.WaveFormat.BitsPerSample / 8)];
+            asMonoSamples.Read(samples, 0, samples.Length);
+            Samples = samples;
+            RawStream.Seek(0, SeekOrigin.Begin);
+
+            Volume = new VolumeSampleProvider(RawStream.ToSampleProvider());
+
+            Output = Volume.ToWaveProvider();
+        }
+
+        public void Dispose()
+        {
+            RawStream.Dispose();
+        }
     }
 }
