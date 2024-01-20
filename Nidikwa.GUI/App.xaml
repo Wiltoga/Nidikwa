@@ -67,6 +67,8 @@
                     Source="SliderStyle.xaml" />
                 <ResourceDictionary
                     Source="Converters.xaml" />
+                <ResourceDictionary
+                    Source="InputBoxStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

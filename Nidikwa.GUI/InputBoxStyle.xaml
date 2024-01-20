@@ -1,0 +1,23 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style
+        x:Key="InputBox"
+        TargetType="TextBox">
+        <Setter
+            Property="Template">
+            <Setter.Value>
+                <ControlTemplate
+                    TargetType="TextBox">
+                    <Border
+                        Background="White"
+                        CornerRadius="4">
+                        <TextBox
+                            BorderThickness="0"
+                            Background="Transparent"
+                            Text="{TemplateBinding Text}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

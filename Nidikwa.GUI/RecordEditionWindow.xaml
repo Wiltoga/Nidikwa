@@ -10,7 +10,6 @@
         Title="Nidikwa"
         Height="700"
         Width="1400"
-        WindowState="Maximized"
         MinWidth="600"
         MinHeight="350"
         FontFamily="{StaticResource Montserrat}"
@@ -40,6 +39,7 @@
                     <DataTemplate
                         DataType="vm:TrackViewModel">
                         <Grid
+                            Margin="3"
                             Height="200">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition
@@ -55,48 +55,36 @@
                             </Grid.RowDefinitions>
                             <Border
                                 Grid.RowSpan="2"
-                                BorderBrush="LightGray"
-                                BorderThickness="1" />
+                                Background="{DynamicResource BackColorSolid}"
+                                CornerRadius="5" />
                             <StackPanel
+                                Margin="3"
                                 Orientation="Horizontal">
-                                <Image
-                                    Stretch="None"
-                                    Source="/assets/output-device.png">
-                                    <Image.Style>
+                                <local:AltImage
+                                    Margin="5"
+                                    Source="/assets/output-device.png"
+                                    AltSource="/assets/input-device.png">
+                                    <local:AltImage.Style>
                                         <Style
-                                            TargetType="Image">
+                                            TargetType="local:AltImage">
                                             <Style.Triggers>
                                                 <DataTrigger
                                                     Binding="{Binding Path=Session.Device.Type}"
                                                     Value="{x:Static models:DeviceType.Input}">
                                                     <Setter
-                                                        Property="Visibility"
-                                                        Value="Collapsed" />
+                                                        Property="AltMode"
+                                                        Value="True" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Image.Style>
-                                </Image>
-                                <Image
-                                    Stretch="None"
-                                    Source="/assets/input-device.png">
-                                    <Image.Style>
-                                        <Style
-                                            TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger
-                                                    Binding="{Binding Path=Session.Device.Type}"
-                                                    Value="{x:Static models:DeviceType.Output}">
-                                                    <Setter
-                                                        Property="Visibility"
-                                                        Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>
-                                </Image>
+                                    </local:AltImage.Style>
+                                </local:AltImage>
                                 <TextBlock
                                     Margin="5"
+                                    FontSize="14"
+                                    VerticalAlignment="Center"
+                                    FontWeight="SemiBold"
+                                    ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"
                                     Text="{Binding Path=Session.Device.Name}" />
                             </StackPanel>
                             <StackPanel
@@ -109,10 +97,14 @@
                                     Volume :
                                 </TextBlock>
                                 <TextBox
+                                    Style="{DynamicResource InputBox}"
                                     PreviewTextInput="NumberTextBox_PreviewTextInput"
                                     Margin="5,0"
                                     Text="{Binding Path=Volume, Converter={StaticResource VolumeConverter}}"
                                     MinWidth="50" />
+                                <TextBlock>
+                                    %
+                                </TextBlock>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
