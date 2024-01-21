@@ -19,6 +19,19 @@ public partial class MainWindow : FluentWindow
         DataContextChanged += (sender, e) =>
         {
             ViewModel = (e.NewValue as MainViewModel)!;
+            ViewModel.Notifications
+                .Subscribe(notification =>
+                {
+                    Snackbar bar = new(snackbarPresenter)
+                    {
+                        Title = notification.Title,
+                        Content = notification.Text,
+                        Appearance = notification.Type,
+                        Timeout = TimeSpan.FromSeconds(10),
+                    };
+                    bar.Show();
+                })
+                .DestroyWith(ViewModel);
         };
         InitializeComponent();
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
@@ -52,6 +65,7 @@ public partial class MainWindow : FluentWindow
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        RootNavigation.Navigate(typeof(DashboardPage));
         await Task.WhenAll([
             ViewModel.ConnectAsync(),
             ViewModel.StartQueueWatcherAsync(),

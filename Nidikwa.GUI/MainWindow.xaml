@@ -28,44 +28,54 @@
     <local:DestroyableContextAttachedProperty.DestroyableContext>
         <vm:MainViewModel />
     </local:DestroyableContextAttachedProperty.DestroyableContext>
-    <DockPanel>
-        <ui:TitleBar
-            Title="Nidikwa"
-            DockPanel.Dock="Top"/>
-        <ui:NavigationView
-            IsBackButtonVisible="Collapsed"
-            x:Name="RootNavigation"
-            OpenPaneLength="150">
-            <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem
-                    NavigationCacheMode="Enabled"
-                    TargetPageType="{x:Type pages:DashboardPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon
-                            Symbol="Home24"/>
-                    </ui:NavigationViewItem.Icon>
-                    Dashboard
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem
-                    NavigationCacheMode="Enabled">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon
-                            Symbol="SoundWaveCircle24" />
-                    </ui:NavigationViewItem.Icon>
-                    Recordings
-                </ui:NavigationViewItem>
-            </ui:NavigationView.MenuItems>
-            <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem
-                    NavigationCacheMode="Enabled"
-                    TargetPageType="{x:Type pages:SettingsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon
-                            Symbol="Settings24" />
-                    </ui:NavigationViewItem.Icon>
-                    Settings
-                </ui:NavigationViewItem>
-            </ui:NavigationView.FooterMenuItems>
-        </ui:NavigationView>
-    </DockPanel>
+    <Grid>
+        <DockPanel>
+            <ui:TitleBar
+                Title="Nidikwa"
+                DockPanel.Dock="Top" />
+            <ui:NavigationView
+                IsBackButtonVisible="Collapsed"
+                x:Name="RootNavigation"
+                OpenPaneLength="150">
+                <ui:NavigationView.MenuItems>
+                    <ui:NavigationViewItem
+                        Name="Dashboard"
+                        NavigationCacheMode="Enabled"
+                        TargetPageType="{x:Type pages:DashboardPage}">
+                        <ui:NavigationViewItem.Icon>
+                            <local:AltIcon
+                                Filled="{Binding ElementName=Dashboard, Path=IsActive}"
+                                Symbol="Home24" />
+                        </ui:NavigationViewItem.Icon>
+                        Dashboard
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem
+                        Name="Recordings"
+                        NavigationCacheMode="Enabled">
+                        <ui:NavigationViewItem.Icon>
+                            <local:AltIcon
+                                Filled="{Binding ElementName=Recordings, Path=IsActive}"
+                                Symbol="SoundWaveCircle24" />
+                        </ui:NavigationViewItem.Icon>
+                        Recordings
+                    </ui:NavigationViewItem>
+                </ui:NavigationView.MenuItems>
+                <ui:NavigationView.FooterMenuItems>
+                    <ui:NavigationViewItem
+                        Name="Settings"
+                        NavigationCacheMode="Enabled"
+                        TargetPageType="{x:Type pages:SettingsPage}">
+                        <ui:NavigationViewItem.Icon>
+                            <local:AltIcon
+                                Filled="{Binding ElementName=Settings, Path=IsActive}"
+                                Symbol="Settings24" />
+                        </ui:NavigationViewItem.Icon>
+                        Settings
+                    </ui:NavigationViewItem>
+                </ui:NavigationView.FooterMenuItems>
+            </ui:NavigationView>
+        </DockPanel>
+        <ui:SnackbarPresenter
+            Name="snackbarPresenter" />
+    </Grid>
 </ui:FluentWindow>

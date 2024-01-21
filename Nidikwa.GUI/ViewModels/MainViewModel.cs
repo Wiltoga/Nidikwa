@@ -5,11 +5,13 @@ using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 using System.IO;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Windows;
+using Wpf.Ui.Controls;
 using TimeoutException = System.TimeoutException;
 
 namespace Nidikwa.GUI.ViewModels;
-
+public record NotificationData(string Title, string Text, ControlAppearance Type);
 public class MainViewModel : DestroyableReactiveObject
 {
     private const string host = "localhost";
@@ -44,6 +46,8 @@ public class MainViewModel : DestroyableReactiveObject
     [Reactive]
     public bool TimeoutReached { get; set; }
 
+    public IObservable<NotificationData> Notifications => notifications;
+    private ISubject<NotificationData> notifications;
     public MainViewModel()
     {
         Connected = false;
@@ -56,6 +60,7 @@ public class MainViewModel : DestroyableReactiveObject
         Devices = [];
         Queue = [];
         DurationSeconds = 30;
+        notifications = new Subject<NotificationData>();
     }
 
     public async Task AddQueueAsync()
@@ -74,7 +79,7 @@ public class MainViewModel : DestroyableReactiveObject
             }
             else
             {
-                MessageBox.Show(result.Code.ToString() + " : " + result.ErrorMessage, "error", MessageBoxButton.OK, MessageBoxImage.Error);
+                notifications.OnNext(new NotificationData("Error", result.Code.ToString() + " : " + result.ErrorMessage, ControlAppearance.Danger));
             }
         }
         catch (OperationCanceledException) { }
@@ -122,7 +127,7 @@ public class MainViewModel : DestroyableReactiveObject
             }
             else
             {
-                MessageBox.Show(result.Code.ToString() + " : " + result.ErrorMessage, "error", MessageBoxButton.OK, MessageBoxImage.Error);
+                notifications.OnNext(new NotificationData("Error", result.Code.ToString() + " : " + result.ErrorMessage, ControlAppearance.Danger));
             }
         }
         catch (OperationCanceledException) { }
@@ -194,7 +199,7 @@ public class MainViewModel : DestroyableReactiveObject
                     {
                         if (!errorShown)
                         {
-                            MessageBox.Show($"Unable to connect, the service is likely not started or listening on a port different than {port}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            notifications.OnNext(new NotificationData("Connection timeout", $"Unable to connect, the service is likely not started or listening on a port different than {port}", ControlAppearance.Caution));
                             errorShown = true;
                         }
                     }

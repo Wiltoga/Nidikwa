@@ -11,7 +11,12 @@
       Title="Settings"
       d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
     <StackPanel
+        Margin="25"
         Orientation="Vertical">
+        <ui:BreadcrumbBar
+            FontSize="18">
+            Recorded devices
+        </ui:BreadcrumbBar>
         <ItemsControl
             Grid.Row="1"
             ItemsSource="{Binding Path=Devices}">
@@ -28,7 +33,8 @@
                                     VerticalAlignment="Center"
                                     Margin="5,0"
                                     Symbol="Mic24"
-                                    AltSymbol="Speaker224">
+                                    AltSymbol="Speaker224"
+                                    Filled="{Binding Path=Selected}">
                                     <local:AltIcon.Style>
                                         <Style
                                             TargetType="local:AltIcon">
