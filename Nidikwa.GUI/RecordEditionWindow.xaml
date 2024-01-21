@@ -61,13 +61,13 @@
                                 <StackPanel
                                     Margin="3"
                                     Orientation="Horizontal">
-                                    <local:AltImage
+                                    <local:AltIcon
                                         Margin="5"
-                                        Source="/assets/output-device.png"
-                                        AltSource="/assets/input-device.png">
-                                        <local:AltImage.Style>
+                                        Symbol="/assets/output-device.png"
+                                        AltSymbol="/assets/input-device.png">
+                                        <local:AltIcon.Style>
                                             <Style
-                                                TargetType="local:AltImage">
+                                                TargetType="local:AltIcon">
                                                 <Style.Triggers>
                                                     <DataTrigger
                                                         Binding="{Binding Path=Session.Device.Type}"
@@ -78,8 +78,8 @@
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </local:AltImage.Style>
-                                    </local:AltImage>
+                                        </local:AltIcon.Style>
+                                    </local:AltIcon>
                                     <TextBlock
                                         Margin="5"
                                         FontSize="14"

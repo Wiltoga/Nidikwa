@@ -1,54 +1,60 @@
 ﻿using Nidikwa.Common;
+using Nidikwa.GUI.Pages;
 using Nidikwa.GUI.ViewModels;
 using System.IO;
 using System.Windows;
+using Wpf.Ui.Controls;
 
-namespace Nidikwa.GUI
+namespace Nidikwa.GUI;
+
+/// <summary>
+/// Interaction logic for MainWindow.xaml
+/// </summary>
+public partial class MainWindow : FluentWindow
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    public static MainViewModel ViewModel { get; private set; } = null!;
+
+    public MainWindow()
     {
-        private MainViewModel ViewModel => (MainViewModel)DataContext;
-
-        public MainWindow()
+        DataContextChanged += (sender, e) =>
         {
-            InitializeComponent();
-        }
+            ViewModel = (e.NewValue as MainViewModel)!;
+        };
+        InitializeComponent();
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
+    }
 
-        private void DeleteRecordButton_Click(object sender, RoutedEventArgs e)
-        {
-            var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
-            if (record is null)
-                return;
-            File.Delete(record.File);
-        }
+    private void DeleteRecordButton_Click(object sender, RoutedEventArgs e)
+    {
+        var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
+        if (record is null)
+            return;
+        File.Delete(record.File);
+    }
 
-        private void OpenEditorButton_Click(object sender, RoutedEventArgs e)
-        {
-            var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
-            if (record is null)
-                return;
-            new RecordEditionWindow(record).ShowDialog();
-        }
+    private void OpenEditorButton_Click(object sender, RoutedEventArgs e)
+    {
+        var record = (sender as FrameworkElement)?.DataContext as RecordSessionFile;
+        if (record is null)
+            return;
+        new RecordEditionWindow(record).ShowDialog();
+    }
 
-        private async void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            await ViewModel.AddQueueAsync();
-        }
+    private async void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.AddQueueAsync();
+    }
 
-        private async void StartStopButton_Click(object sender, RoutedEventArgs e)
-        {
-            await ViewModel.StartStopRecordAsync();
-        }
+    private async void StartStopButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.StartStopRecordAsync();
+    }
 
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            await Task.WhenAll([
-                ViewModel.ConnectAsync(),
-                ViewModel.StartQueueWatcherAsync(),
-            ]);
-        }
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        await Task.WhenAll([
+            ViewModel.ConnectAsync(),
+            ViewModel.StartQueueWatcherAsync(),
+        ]);
     }
 }
