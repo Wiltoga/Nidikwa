@@ -26,6 +26,12 @@ public class MainViewModel : DestroyableReactiveObject
     public DeviceViewModel[] Devices { get; set; }
 
     [Reactive]
+    public DeviceViewModel[] InputDevices { get; set; }
+
+    [Reactive]
+    public DeviceViewModel[] OutputDevices { get; set; }
+
+    [Reactive]
     public bool Disconnected { get; set; }
 
     [Reactive]
@@ -56,8 +62,18 @@ public class MainViewModel : DestroyableReactiveObject
             .Select(value => !value)
             .BindTo(this, o => o.Disconnected)
             .DestroyWith(this);
+        this.WhenAnyValue(o => o.Devices)
+            .Select(devices => devices?.Where(device => device.Reference.Type == DeviceType.Input).ToArray())
+            .BindTo(this, o => o.InputDevices)
+            .DestroyWith(this);
+        this.WhenAnyValue(o => o.Devices)
+            .Select(devices => devices?.Where(device => device.Reference.Type == DeviceType.Output).ToArray())
+            .BindTo(this, o => o.OutputDevices)
+            .DestroyWith(this);
         Recording = false;
         Devices = [];
+        OutputDevices = [];
+        InputDevices = [];
         Queue = [];
         DurationSeconds = 30;
         notifications = new Subject<NotificationData>();

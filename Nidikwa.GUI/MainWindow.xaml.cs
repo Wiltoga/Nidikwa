@@ -71,4 +71,12 @@ public partial class MainWindow : FluentWindow
             ViewModel.StartQueueWatcherAsync(),
         ]);
     }
+
+    private void RootNavigation_Loaded(object sender, RoutedEventArgs e)
+    {
+        var panel = sender as NavigationView;
+        if (panel is null)
+            return;
+        panel.IsPaneOpen = false;
+    }
 }

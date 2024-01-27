@@ -15,11 +15,78 @@
         Orientation="Vertical">
         <ui:BreadcrumbBar
             FontSize="18">
-            Recorded devices
+            Maximum buffer duration
+        </ui:BreadcrumbBar>
+        <DockPanel>
+            <Label
+                Margin="5,0">
+                Duration :
+            </Label>
+            <Label
+                Margin="5,0"
+                Content="{Binding Path=DurationSeconds}" />
+            <Label
+                Margin="5,0">
+                Seconds
+            </Label>
+            <Slider
+                Value="{Binding Path=DurationSeconds}"
+                Minimum="5"
+                Maximum="30" />
+        </DockPanel>
+        <ui:BreadcrumbBar
+            FontSize="18">
+            Output devices
         </ui:BreadcrumbBar>
         <ItemsControl
             Grid.Row="1"
-            ItemsSource="{Binding Path=Devices}">
+            ItemsSource="{Binding Path=OutputDevices}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate
+                    DataType="vm:DeviceViewModel">
+                    <ui:Card
+                        Margin="5">
+                        <ui:ToggleSwitch
+                            IsChecked="{Binding Path=Selected, Mode=TwoWay}">
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <local:AltIcon
+                                    VerticalAlignment="Center"
+                                    Margin="5,0"
+                                    Symbol="Mic24"
+                                    AltSymbol="Speaker224"
+                                    Filled="{Binding Path=Selected}">
+                                    <local:AltIcon.Style>
+                                        <Style
+                                            TargetType="local:AltIcon">
+                                            <Style.Triggers>
+                                                <DataTrigger
+                                                    Binding="{Binding Path=Reference.Type}"
+                                                    Value="Output">
+                                                    <Setter
+                                                        Property="AltMode"
+                                                        Value="True" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </local:AltIcon.Style>
+                                </local:AltIcon>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Path=Reference.Name}" />
+                            </StackPanel>
+                        </ui:ToggleSwitch>
+                    </ui:Card>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ui:BreadcrumbBar
+            FontSize="18">
+            Input devices
+        </ui:BreadcrumbBar>
+        <ItemsControl
+            Grid.Row="1"
+            ItemsSource="{Binding Path=InputDevices}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate
                     DataType="vm:DeviceViewModel">

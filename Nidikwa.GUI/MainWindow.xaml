@@ -13,7 +13,7 @@
     Title="Nidikwa"
     Height="500"
     ExtendsContentIntoTitleBar="True"
-    WindowBackdropType="Tabbed"
+    WindowBackdropType="Acrylic"
     WindowStartupLocation="CenterScreen"
     WindowCornerPreference="Round"
     Width="900"
@@ -36,7 +36,8 @@
             <ui:NavigationView
                 IsBackButtonVisible="Collapsed"
                 x:Name="RootNavigation"
-                OpenPaneLength="150">
+                OpenPaneLength="150"
+                Loaded="RootNavigation_Loaded">
                 <ui:NavigationView.MenuItems>
                     <ui:NavigationViewItem
                         Name="Dashboard"
