@@ -1,12 +1,18 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Options;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 namespace Nidikwa.Service;
 
+internal class SocketManagerConfig
+{
+    public required int Port { get; set; }
+}
+
 internal class SocketManagerWorker(
     ILogger<SocketManagerWorker> logger,
-    IConfiguration configuration,
+    IOptionsSnapshot<SocketManagerConfig> options,
     IServiceScopeFactory serviceScopeFactory
 ) : BackgroundService
 {
@@ -73,7 +79,7 @@ internal class SocketManagerWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var port = configuration.GetValue<int>("port");
+        var port = options.Value.Port;
         if (port <= 1024)
             throw new ArgumentException("port");
         var ipHostInfo = await Dns.GetHostEntryAsync("localhost", stoppingToken);

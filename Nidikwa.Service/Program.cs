@@ -7,22 +7,22 @@ using Nidikwa.Service;
 
 
 var builder = Host.CreateApplicationBuilder(args);
+LoggerProviderOptions.RegisterProviderOptions<EventLogSettings, EventLogLoggerProvider>(builder.Services);
 builder.Services
     .AddWindowsService(options =>
     {
         options.ServiceName = "Nidikwa Service";
-    });
-LoggerProviderOptions.RegisterProviderOptions<EventLogSettings, EventLogLoggerProvider>(builder.Services);
-builder.Services
+    })
+    .Configure<SocketManagerConfig>(builder.Configuration.GetRequiredSection(nameof(SocketManagerConfig)))
     .AddHostedService<SocketManagerWorker>()
     .AddSingleton<IAudioService, AudioService>()
     .AddControllers()
     .AddSingleton(new JsonSerializerSettings
     {
-        Converters = new JsonConverter[]
-        {
+        Converters =
+        [
             new StringEnumConverter(new CamelCaseNamingStrategy())
-        }
+        ]
     })
     .AddLogging(logBuilder =>
     {
@@ -34,4 +34,4 @@ builder.Services
 ;
 
 var host = builder.Build();
-host.Run();
+await host.RunAsync();
