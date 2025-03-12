@@ -1,22 +1,44 @@
 ﻿using Nidikwa.Models;
-using Nidikwa.Common;
 
 namespace Nidikwa.Service;
 
-internal interface IAudioService
+public class DeviceChangedEventArgs : EventArgs
 {
-    event EventHandler StatusChanged;
-    event EventHandler DevicesChanged;
+    public required Device[] Devices { get; init; }
+}
 
-    Task<bool> IsRecordingAsync();
+public enum AudioServiceStatus
+{
+    Recording,
+    Stopped,
+}
 
-    Task StartRecordAsync(RecordParams args);
+public class StatusChangedEventArgs : EventArgs
+{
+    public required AudioServiceStatus Status { get; init; }
+}
 
-    Task<Device[]> GetRecordingDevicesAsync();
+public delegate void DevicesChangedEventHandler(object sender, DeviceChangedEventArgs e);
+public delegate void StatusChangedEventHandler(object sender, StatusChangedEventArgs e);
 
-    Task<TimeSpan> GetCurrentMaxDurationAsync();
+public interface IAudioService
+{
+    event StatusChangedEventHandler StatusChanged;
+    event DevicesChangedEventHandler DevicesChanged;
 
-    Task StopRecordAsync();
+    AudioServiceStatus Status { get; }
 
-    Task<(Stream Stream, int ComputedSize)> SaveAsNdkwAsync();
+    void StartRecord(string[] DeviceIds, TimeSpan CacheDuration);
+
+    Device[] GetRecordingDevices();
+
+    Device[] GetAllDevices();
+
+    Device GetDefaultDevice(DeviceType type);
+
+    TimeSpan GetCurrentMaxDuration();
+
+    void StopRecord();
+
+    Task SaveAsNdkwAsync(Stream stream);
 }

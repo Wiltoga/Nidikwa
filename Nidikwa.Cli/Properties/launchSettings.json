@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Nidikwa.Cli": {
-      "commandName": "Project",
-      "commandLineArgs": "help"
-    }
-  }
-}

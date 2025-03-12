@@ -1,4 +1,4 @@
-﻿namespace Nidikwa.Common;
+﻿namespace Nidikwa.Service;
 
 public class CacheStream : Stream
 {

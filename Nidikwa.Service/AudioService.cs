@@ -3,8 +3,6 @@ using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 using Nidikwa.FileEncoding;
 using Nidikwa.Models;
-using Nidikwa.Common;
-using System.IO;
 
 namespace Nidikwa.Service;
 
@@ -48,13 +46,13 @@ internal class DeviceRecording
     }
 }
 
-internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDisposable
+internal sealed class AudioService : IAudioService, IMMNotificationClient, IDisposable
 {
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1);
     private readonly ILogger<AudioService> logger;
     private bool activeRecording;
     private object activeRecordingMutex;
-    private List<string> deviceCache;
+    private List<Device> deviceCache;
     private MMDeviceEnumerator MMDeviceEnumerator;
     private TimeSpan CurrentMaxDuration { get; set; }
 
@@ -69,49 +67,63 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         deviceCache = new();
         activeRecording = false;
         activeRecordingMutex = new();
-        deviceCache.AddRange(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(device => device.ID));
+        deviceCache.AddRange(MMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active).Select(MapDevice));
         MMDeviceEnumerator.RegisterEndpointNotificationCallback(this);
     }
 
-    public event EventHandler? DevicesChanged;
+    public event DevicesChangedEventHandler? DevicesChanged;
 
-    public event EventHandler? StatusChanged;
+    public event StatusChangedEventHandler? StatusChanged;
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (await IsRecordingAsync())
-            await StopRecordAsync();
+        if (Status == AudioServiceStatus.Recording)
+            StopRecord();
         MMDeviceEnumerator.UnregisterEndpointNotificationCallback(this);
     }
 
-    public Task<TimeSpan> GetCurrentMaxDurationAsync()
+    public TimeSpan GetCurrentMaxDuration()
     {
         return Locked(() =>
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
 
-            return Task.FromResult(CurrentMaxDuration);
+            return CurrentMaxDuration;
         });
     }
 
-    public Task<Device[]> GetRecordingDevicesAsync()
+    public Device[] GetRecordingDevices()
     {
         return Locked(() =>
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
 
-            return Task.FromResult(Recordings.Select(session => MapDevice(session.MmDevice)).ToArray());
+            return Recordings.Select(session => MapDevice(session.MmDevice)).ToArray();
         });
     }
 
-    public Task<bool> IsRecordingAsync()
+    public Device[] GetAllDevices()
     {
-        return Locked(() =>
+        return deviceCache.ToArray();
+    }
+
+    public Device GetDefaultDevice(DeviceType type)
+    {
+        var device = MMDeviceEnumerator.GetDefaultAudioEndpoint(type == DeviceType.Input ? DataFlow.Capture : DataFlow.Render, Role.Multimedia);
+        return deviceCache.Find(d => d.Id == device.ID)!;
+    }
+
+    public AudioServiceStatus Status
+    {
+        get
         {
-            return Task.FromResult(Recordings is not null);
-        });
+            return Locked(() =>
+            {
+                return Recordings is null ? AudioServiceStatus.Stopped : AudioServiceStatus.Recording;
+            });
+        }
     }
 
     public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
@@ -124,30 +136,32 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         var device = MMDeviceEnumerator.GetDevice(pwstrDeviceId);
         if (device.State == DeviceState.Active)
         {
-            deviceCache.Add(pwstrDeviceId);
-            DevicesChanged?.Invoke(this, EventArgs.Empty);
+            deviceCache.Add(MapDevice(device));
+            DevicesChanged?.Invoke(this, new DeviceChangedEventArgs { Devices = deviceCache.ToArray() });
         }
     }
 
     public void OnDeviceRemoved(string deviceId)
     {
-        if (deviceCache.Remove(deviceId))
+        if (deviceCache.RemoveAll(device => device.Id == deviceId) > 0)
         {
-            DevicesChanged?.Invoke(this, EventArgs.Empty);
+            DevicesChanged?.Invoke(this, new DeviceChangedEventArgs { Devices = deviceCache.ToArray() });
         }
     }
 
     public void OnDeviceStateChanged(string deviceId, DeviceState newState)
     {
-        if (deviceCache.Contains(deviceId) && newState != DeviceState.Active)
+        if (deviceCache.Exists(device => device.Id == deviceId) && newState != DeviceState.Active)
         {
-            deviceCache.Remove(deviceId);
-            DevicesChanged?.Invoke(this, EventArgs.Empty);
+            var device = deviceCache.Find(device => device.Id == deviceId)!;
+            deviceCache.Remove(device);
+            DevicesChanged?.Invoke(this, new DeviceChangedEventArgs { Devices = deviceCache.ToArray() });
         }
-        else if (!deviceCache.Contains(deviceId) && newState == DeviceState.Active)
+        else if (!deviceCache.Exists(device => device.Id == deviceId) && newState == DeviceState.Active)
         {
-            deviceCache.Add(deviceId);
-            DevicesChanged?.Invoke(this, EventArgs.Empty);
+            var device = MapDevice(MMDeviceEnumerator.GetDevice(deviceId));
+            deviceCache.Add(device);
+            DevicesChanged?.Invoke(this, new DeviceChangedEventArgs { Devices = deviceCache.ToArray() });
         }
     }
 
@@ -156,72 +170,75 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
 
     }
 
-    public async Task<(Stream Stream, int ComputedSize)> SaveAsNdkwAsync()
+    public async Task SaveAsNdkwAsync(Stream stream)
     {
         logger.LogInformation("Save as NDKW");
-        var (sessionsData, duration) = await Locked(async () =>
+        await Locked(async () =>
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
+            logger.LogInformation("Stopping recordings");
 
-            TimeSpan? duration = null;
-            var sessionsData = await Task.WhenAll(Recordings.Select(async (recording, index) =>
+            foreach (var recording in Recordings)
             {
                 lock (recording.Mutex)
                 {
                     recording.Paused = true;
                 }
+            }
+
+            logger.LogInformation("Exporting to RecordSession");
+            TimeSpan duration = default;
+            var sessionsData = Recordings.ToDictionary(recording => recording.MmDevice.ID, recording =>
+            {
                 recording.Buffer.Flush();
-                duration ??= TimeSpan.FromSeconds(recording.Cache.Length / (double)recording.Capture.WaveFormat.AverageBytesPerSecond);
-                var tempFile = Path.GetTempFileName();
 
                 recording.Cache.Seek(0, SeekOrigin.Begin);
-                using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.Read))
-                {
-                    var waveWriter = new WaveFileWriter(fileStream, recording.Capture.WaveFormat);
-                    await recording.Cache.CopyToAsync(waveWriter);
-                    await waveWriter.FlushAsync();
-                }
+
+                var waveStream = new RawSourceWaveStream(recording.Cache, recording.Capture.WaveFormat);
+                var waveFileStream = new WaveFileStream(waveStream);
+                duration = waveStream.TotalTime;
+
+                return waveFileStream as Stream;
+            });
+
+            var recordSession = new RecordSession(
+                new RecordSessionMetadata(
+                    DateTimeOffset.Now,
+                    duration,
+                    Recordings.Select(recording => MapDevice(recording.MmDevice)).ToArray()
+                ),
+                sessionsData
+            );
+
+            var encoder = new SessionEncoder();
+            logger.LogInformation("Saving session");
+            await encoder.WriteAsync(stream, recordSession).ConfigureAwait(false);
+
+            logger.LogInformation("Restarting recordings");
+
+            foreach (var recording in Recordings)
+            {
                 recording.Cache.Seek(0, SeekOrigin.End);
                 lock (recording.Mutex)
                 {
                     recording.Paused = false;
                 }
-                return (tempFile, recording.MmDevice);
-            })).ConfigureAwait(false);
-
-            return (sessionsData, duration);
-        });
-
-        var deviceSessions = sessionsData.Select(sessionData => new DeviceSessionAsFile(MapDevice(sessionData.MmDevice), sessionData.tempFile)).ToArray();
-
-        var resultFile = new RecordSessionAsFile(
-            new RecordSessionMetadata(
-                Guid.NewGuid(),
-                DateTimeOffset.Now,
-                duration!.Value
-            ),
-            deviceSessions
-        );
-
-        var encoder = new SessionEncoder();
-        var stream = new EchoStream(5);
-        var computedSize = await encoder.GetStreamedSizeAsync(resultFile);
-        _ = encoder.StreamSessionAsync(resultFile, stream, true).ContinueWith(_ => stream.Close());
-        return (stream, computedSize);
+            }
+        }).ConfigureAwait(false);
     }
 
-    public Task StartRecordAsync(RecordParams args)
+    public void StartRecord(string[] deviceIds, TimeSpan cacheDuration)
     {
         logger.LogInformation("Start recording");
-        if (args.DeviceIds.Length == 0)
-            return Task.CompletedTask;
-        return Locked(async () =>
+        if (deviceIds.Length == 0)
+            return;
+        Locked(() =>
         {
             if (Recordings is not null)
                 throw new InvalidOperationException("The service is already recording");
 
-            Recordings = args.DeviceIds.Select(id =>
+            Recordings = deviceIds.Select(id =>
             {
                 var mmDevice = MMDeviceEnumerator
                     .GetDevice(id);
@@ -247,7 +264,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                     capture.WaveFormat = new WaveFormat(capture.WaveFormat.SampleRate, capture.WaveFormat.BitsPerSample, 2);
 
                 var tempFilename = Path.GetTempFileName();
-                var cache = new CacheStream(new FileStream(tempFilename, FileMode.Create, FileAccess.ReadWrite, FileShare.Read), capture.WaveFormat.AverageBytesPerSecond * (long)args.CacheDuration.TotalSeconds);
+                var cache = new CacheStream(new FileStream(tempFilename, FileMode.Create, FileAccess.ReadWrite, FileShare.Read), capture.WaveFormat.AverageBytesPerSecond * (long)cacheDuration.TotalSeconds);
                 var buffer = new BufferedStream(cache, 1 << 23);
                 var deviceRecording = new DeviceRecording(mmDevice, capture, cache, buffer, silence, tempFilename);
                 void writeBuffer(ReadOnlySpan<byte> recordedBuffer)
@@ -279,7 +296,7 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                     }
                     lock (deviceRecording.Mutex)
                     {
-                        writeBuffer(e.Buffer[..e.BytesRecorded]);
+                        writeBuffer(e.Buffer.AsSpan()[..e.BytesRecorded]);
                     }
                 };
                 silence?.Play();
@@ -287,51 +304,58 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
                 return deviceRecording;
             }).ToArray();
 
-            await Task.WhenAll(Recordings.Select(recording => Task.Run(() => recording.Capture.StartRecording()))).ConfigureAwait(false);
+            foreach (var recording in Recordings)
+            {
+                recording.Capture.StartRecording();
+            }
 
             lock (activeRecordingMutex)
             {
                 activeRecording = true;
             }
-            CurrentMaxDuration = args.CacheDuration;
-            StatusChanged?.Invoke(this, EventArgs.Empty);
+            CurrentMaxDuration = cacheDuration;
+            StatusChanged?.Invoke(this, new StatusChangedEventArgs { Status = Status });
         });
     }
 
-    public Task StopRecordAsync()
+    public void StopRecord()
     {
         logger.LogInformation("Stop recording");
-        return Locked(async () =>
+        Locked(() =>
         {
             if (Recordings is null)
                 throw new InvalidOperationException("The service is not recording");
             lock (activeRecordingMutex)
             {
-                activeRecording = true;
+                activeRecording = false;
             }
-            var tasks = Recordings.Select(async recording =>
+            var recordingSets = Recordings.Select(recording =>
             {
-                var taskSource = new TaskCompletionSource();
+                var mutex = new SemaphoreSlim(0, 1);
                 recording.Capture.RecordingStopped += (sender, e) =>
                 {
-                    taskSource.SetResult();
+                    mutex.Release();
                 };
                 recording.Capture.StopRecording();
 
-                await taskSource.Task.ConfigureAwait(false);
+                return (recording, mutex);
+            }).ToArray();
 
+            foreach (var (recording, mutex) in recordingSets)
+            {
+                mutex.Wait();
                 recording.Capture.Dispose();
 
                 recording.Silence?.Stop();
                 recording.Buffer.Dispose();
 
                 File.Delete(recording.TempFile);
-            }).ToArray();
-
-            await Task.WhenAll(tasks).ConfigureAwait(false);
-            StatusChanged?.Invoke(this, EventArgs.Empty);
-
+            }
+            
             Recordings = null;
+
+            StatusChanged?.Invoke(this, new StatusChangedEventArgs { Status = Status });
+
         });
     }
 
@@ -354,6 +378,32 @@ internal class AudioService : IAudioService, IMMNotificationClient, IAsyncDispos
         {
             await _lock.WaitAsync().ConfigureAwait(false);
             return await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private T Locked<T>(Func<T> action)
+    {
+        try
+        {
+            _lock.Wait();
+            return action();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private void Locked(Action action)
+    {
+        try
+        {
+            _lock.Wait();
+            action();
         }
         finally
         {

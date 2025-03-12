@@ -1,148 +1,113 @@
 ﻿using Nidikwa.Models;
-using System.IO;
-using System.Text;
+using System.IO.Compression;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Nidikwa.FileEncoding;
 
 public class SessionEncoder
 {
-    private const string fileType = "NDKW";
-    private static ISessionIO[] SessionIOs;
-
-    static SessionEncoder()
+    private sealed class TempFileDisposer : IDisposable
     {
-        SessionIOs = (from type in typeof(SessionEncoder).Assembly.GetTypes()
-                      where type.GetInterfaces().Contains(typeof(ISessionIO)) && type.GetConstructor(Array.Empty<Type>()) is not null
-                      select type.GetConstructor(Array.Empty<Type>())!.Invoke(null) as ISessionIO)
-            .ToArray();
-    }
+        private readonly IEnumerable<FileStream> _files;
 
-    public async Task<int> GetStreamedSizeAsync(RecordSessionAsFile session, ushort? version = null, CancellationToken cancellationToken = default)
-    {
-        ISessionIO? sessionIO = null;
-        if (version is null)
+        public TempFileDisposer(IEnumerable<FileStream> files)
         {
-            sessionIO = SessionIOs.Aggregate((acc, current) =>
+            _files = files;
+        }
+
+        public void Dispose()
+        {
+            foreach (var file in _files)
             {
-                return current.FileVersion > acc.FileVersion
-                    ? current
-                    : acc;
-            });
-        }
-        else
-        {
-            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
-        }
-
-        if (sessionIO is null)
-            throw new ArgumentException("Version not supported");
-
-        var fileSize = await sessionIO.GetStreamedSizeAsync(session, cancellationToken);
-        fileSize +=
-            Encoding.ASCII.GetBytes(fileType).Length // signature
-            + 2; // file version
-        return fileSize;
-    }
-
-    public async Task<RecordSessionMetadata> ParseMetadataAsync(Stream stream, ushort? desiredVersion = null, CancellationToken cancellationToken = default)
-    {
-        var signatureBytes = new byte[4];
-        await stream.ReadAsync(signatureBytes);
-        if (Encoding.ASCII.GetString(signatureBytes) != fileType)
-            throw new FormatException($"The provided file is not a valid {fileType} file");
-        var versionBytes = new byte[sizeof(ushort)];
-        await stream.ReadAsync(versionBytes);
-        var version = BitConverter.ToUInt16(versionBytes);
-        if (desiredVersion is not null && version != desiredVersion)
-            throw new ArgumentException("The provided file is not suitable for this version");
-
-        var validReader = SessionIOs.FirstOrDefault(reader => reader.FileVersion == version);
-
-        if (validReader is null)
-            throw new FormatException("The provided file is encoded in an unknown version");
-
-        return await validReader.ReadMetadataAsync(stream, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task<RecordSession> ParseSessionAsync(Stream stream, ushort? desiredVersion = null, CancellationToken cancellationToken = default)
-    {
-        var signatureBytes = new byte[4];
-        await stream.ReadAsync(signatureBytes);
-        if (Encoding.ASCII.GetString(signatureBytes) != fileType)
-            throw new FormatException($"The provided file is not a valid {fileType} file");
-        var versionBytes = new byte[sizeof(ushort)];
-        await stream.ReadAsync(versionBytes);
-        var version = BitConverter.ToUInt16(versionBytes);
-        if (desiredVersion is not null && version != desiredVersion)
-            throw new ArgumentException("The provided file is not suitable for this version");
-
-        var validReader = SessionIOs.FirstOrDefault(reader => reader.FileVersion == version);
-
-        if (validReader is null)
-            throw new FormatException("The provided file is encoded in an unknown version");
-
-        return await validReader.ReadSessionAsync(stream, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task StreamSessionAsync(RecordSessionAsFile session, Stream stream, bool autoDeleteFiles, ushort? version = null, CancellationToken cancellationToken = default)
-    {
-        ISessionIO? sessionIO = null;
-        if (version is null)
-        {
-            sessionIO = SessionIOs.Aggregate((acc, current) =>
-            {
-                return current.FileVersion > acc.FileVersion
-                    ? current
-                    : acc;
-            });
-        }
-        else
-        {
-            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
-        }
-
-        if (sessionIO is null)
-            throw new ArgumentException("Version not supported");
-
-        var signatureBytes = Encoding.ASCII.GetBytes(fileType);
-        var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
-        await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
-        await sessionIO.StreamSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
-        if (autoDeleteFiles)
-        {
-            foreach (var deviceSession in session.DeviceSessions.ToArray())
-            {
-                if (File.Exists(deviceSession.TempFile))
-                {
-                    File.Delete(deviceSession.TempFile);
-                }
+                var filename = file.Name;
+                file.Dispose();
+                File.Delete(filename);
             }
         }
     }
 
-    public async Task WriteSessionAsync(RecordSession session, Stream stream, ushort? version = null, CancellationToken cancellationToken = default)
+    private const string RecordingFolder = "recordings";
+    private const string MetadataFile = "metadata.json";
+    private const string RecordingFileExtension = ".wav";
+    public async Task WriteAsync(Stream stream, RecordSession recordSession, CancellationToken cancellationToken = default)
     {
-        ISessionIO? sessionIO = null;
-        if (version is null)
+        using ZipArchive archive = new(stream, ZipArchiveMode.Create, true);
+
+        using (var metadataStream = archive.CreateEntry(MetadataFile).Open())
         {
-            sessionIO = SessionIOs.Aggregate((acc, current) =>
+            await JsonSerializer.SerializeAsync(metadataStream, recordSession.Metadata, typeof(RecordSessionMetadata), new JsonSerializerOptions
             {
-                return current.FileVersion > acc.FileVersion
-                    ? current
-                    : acc;
-            });
+                WriteIndented = true,
+                Converters = { new JsonStringEnumConverter<DeviceType>() }
+            }, cancellationToken);
         }
-        else
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var device in recordSession.WaveData)
         {
-            sessionIO = SessionIOs.FirstOrDefault(sessionIO => sessionIO.FileVersion == version);
+            using (var wavStream = archive.CreateEntry(Path.Combine(RecordingFolder, $"{device.Key}{RecordingFileExtension}")).Open())
+            {
+                await device.Value.CopyToAsync(wavStream, cancellationToken);
+            }
         }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
 
-        if (sessionIO is null)
-            throw new ArgumentException("Version not supported");
+    public async Task<RecordSessionMetadata> ReadMetadataAsync(Stream stream, CancellationToken cancellationToken = default)
+    {
+        using ZipArchive archive = new(stream, ZipArchiveMode.Read, true);
 
-        var signatureBytes = Encoding.ASCII.GetBytes(fileType);
-        var versionBytes = BitConverter.GetBytes(sessionIO.FileVersion);
-        await stream.WriteAsync(signatureBytes.Concat(versionBytes).ToArray(), cancellationToken).ConfigureAwait(false);
-        await sessionIO.WriteSessionAsync(session, stream, cancellationToken).ConfigureAwait(false);
+        return await ReadMetadataFromArchiveAsync(archive, cancellationToken);
+    }
+
+    private async Task<RecordSessionMetadata> ReadMetadataFromArchiveAsync(ZipArchive archive, CancellationToken cancellationToken)
+    {
+        var metadataEntry = archive.GetEntry(MetadataFile);
+        if (metadataEntry is null)
+        {
+            throw new NdkwFileFormatException();
+        }
+        RecordSessionMetadata? metadata;
+        using (var metadataStream = metadataEntry.Open())
+        {
+            metadata = await JsonSerializer.DeserializeAsync<RecordSessionMetadata>(metadataStream, new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter<DeviceType>() }
+            }, cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (metadata is null)
+        {
+            throw new NdkwFileFormatException();
+        }
+        return metadata;
+    }
+
+    private async Task<Dictionary<string, FileStream>> ReadSessionFromArchiveAsync(ZipArchive archive, IEnumerable<string> deviceIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<string, FileStream>();
+        foreach (var deviceId in deviceIds)
+        {
+            var wavEntry = archive.GetEntry(Path.Combine(RecordingFolder, $"{deviceId}{RecordingFileExtension}"));
+            if (wavEntry is null)
+            {
+                throw new NdkwFileFormatException();
+            }
+            var tempFileStream = new FileStream(Path.GetTempFileName(), FileMode.Open);
+            await wavEntry.Open().CopyToAsync(tempFileStream);
+            result[deviceId] = tempFileStream;
+        }
+        return result;
+    }
+
+    public async Task<(RecordSession Session, IDisposable StreamsDisposer)> ReadSessionAsync(Stream stream, CancellationToken cancellationToken = default)
+    {
+        using ZipArchive archive = new(stream, ZipArchiveMode.Read, true);
+
+        var metadata = await ReadMetadataFromArchiveAsync(archive, cancellationToken);
+
+        var waveData = await ReadSessionFromArchiveAsync(archive, metadata.Devices.Select(d => d.Id), cancellationToken);
+
+        return (new RecordSession(metadata, waveData.ToDictionary(data => data.Key, data => data.Value as Stream)), new TempFileDisposer(waveData.Values));
     }
 }

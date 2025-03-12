@@ -1,3 +1,3 @@
 ﻿namespace Nidikwa.Models;
 
-public record RecordSessionMetadata(Guid Id, DateTimeOffset Date, TimeSpan TotalDuration);
+public record RecordSessionMetadata(DateTimeOffset Date, TimeSpan TotalDuration, Device[] Devices);
